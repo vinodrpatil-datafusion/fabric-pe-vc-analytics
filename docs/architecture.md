@@ -1,0 +1,222 @@
+# Architecture — PE/VC Investment Analytics Platform on Microsoft Fabric
+
+This document describes the end-to-end architecture of the platform: workspace layout, data flow, component responsibilities, and the rationale behind each significant decision.
+
+For decision rationale specifically, see [`design_decisions.md`](design_decisions.md). For the domain schema, see [`data_model.md`](data_model.md).
+
+---
+
+## 1. Architectural principles
+
+The architecture is shaped by five principles, applied in order of precedence when they conflict.
+
+**1.1 Data quality enforced upstream of AI.** The LLM layer reasons over validated, reconciled, source-attributed data. The conformed layer is the trust boundary; nothing reaches AI before it is enforced there.
+
+**1.2 Lineage as substrate, not feature.** Every data point carries source, ingestion timestamp, and effective-date metadata from landing through serving. Audit and reproducibility are continuously available, not retrofitted on incident.
+
+**1.3 Point-in-time integrity is mandatory.** Investment data is bitemporal. The platform distinguishes `effective_date` (when the fact became true in the world) from `ingestion_date` (when it became known to the platform). Screening and IC outputs are reproducible against the data state at any historical point.
+
+**1.4 Relational density modelled explicitly.** PE/VC is a graph problem at heart. Investor → fund → portfolio company → co-investor → board member relationships are first-class, not derived through application-layer joins.
+
+**1.5 Workspace boundaries reflect governance boundaries.** Ingestion, conformed, and serving live in separate Fabric workspaces with distinct RBAC. Cross-workspace access is through shortcuts (read-only) and explicit promotion paths.
+
+---
+
+## 2. Workspace layout
+
+Three primary workspaces, organised under an **Investment Analytics** Fabric domain.
+
+### 2.1 Ingestion workspace
+
+**Purpose:** Receive raw external and internal data with no transformation. Source-of-truth landing zone.
+
+**Contents:**
+- OneLake lakehouse: `landing_lakehouse`
+- Shortcuts to external storage (ADLS Gen2 for DealRoom feeds, additional shortcuts for vendor-equivalents)
+- Schema validation notebooks
+- Source attribution metadata tables
+
+**Access:** Data engineering team write; conformed workspace read via shortcut. No direct analyst or AI access.
+
+**Why isolated:** Raw data may contain PII, contractual terms under NDA, or unvalidated vendor outputs. Quarantining it protects every downstream consumer.
+
+### 2.2 Conformed workspace
+
+**Purpose:** The trust boundary. Data here is validated, reconciled, deduplicated, source-attributed, and bitemporally modelled.
+
+**Contents:**
+- OneLake lakehouse: `conformed_lakehouse` (Delta tables)
+- Reconciliation logic (Spark notebooks / Dataflow Gen2)
+- Bitemporal slowly-changing-dimension implementations
+- Data quality assertion notebooks
+- Domain entity tables (companies, funding rounds, investors, investments, people, deals, documents)
+
+**Access:** Data engineering write; serving workspaces read; AI layer reads from here only.
+
+**Why this is the trust boundary:** Everything that consumes data — analytical workloads, BI semantic models, AI integrations — reads from conformed. Quality enforced once, consumed by many.
+
+### 2.3 Serving workspaces
+
+Three serving paths consume the conformed layer for different access patterns.
+
+#### 2.3.1 Analytical serving — Warehouse
+
+**Purpose:** SQL-shaped analytical queries, aggregations, BI ad-hoc.
+
+**Why Warehouse, not Lakehouse SQL endpoint:** The SQL optimiser in Warehouse is more mature for analytical workloads (joins across large fact tables, window functions, complex aggregations). Lakehouse SQL endpoint works for simpler shapes; Warehouse is the right serving layer for the analytical workloads investment analysts run.
+
+**Contents:**
+- Star-schema views over conformed Delta tables (via OneLake shortcut)
+- Aggregation tables materialised for high-frequency queries
+- T-SQL stored procedures for parameterised analytical patterns
+
+#### 2.3.2 BI semantic serving — DirectLake
+
+**Purpose:** Power BI semantic model for analyst self-service.
+
+**Why DirectLake:** Eliminates import refresh cycles, reads Delta directly, sub-second performance at semantic-model scale. The semantic model is the version-of-truth for measures and hierarchies; analysts consume through Power BI without parallel datasets drifting from source.
+
+**Contents:**
+- `investment_analytics.bim` semantic model
+- DAX measures encoding institutional definitions (IRR, MOIC, vintage cohorts)
+- Row-level security tied to workspace RBAC
+
+#### 2.3.3 AI serving — Azure OpenAI integration layer
+
+**Purpose:** Grounded AI workloads — retrieval, summarisation, structured insight generation.
+
+**Why a separate workspace:** AI workloads have different access patterns (low-latency point-lookups + vector retrieval), different governance requirements (prompt/response logging, model versioning), and different cost models (per-token, not per-CU).
+
+**Contents:**
+- Retrieval functions against conformed Delta
+- Vector index for document embeddings (Azure AI Search externally; future migration to Fabric vector capabilities when GA)
+- Prompt template library with version control
+- Structured-output schemas for AI responses
+- Inference audit log (separate from data lineage)
+
+---
+
+## 3. Data flow
+
+### 3.1 Ingestion to landing
+
+External data sources are accessed through **OneLake shortcuts** to underlying storage, not copied into Fabric.
+
+**Why shortcuts:**
+- Single source of truth — no duplication, no refresh drift
+- Lineage clarity — Purview traces back to original source through the shortcut
+- Cost — no storage duplication
+- Freshness — reads always see the latest in the source
+
+**Trade-off acknowledged:** Shortcuts introduce a dependency on source availability and tolerate source-side schema changes poorly. The validation layer (Section 3.2) is the compensating control.
+
+For internal historical deal data and any feed that requires transformation before landing, **Fabric Data Pipelines** (inheriting ADF heritage) handle the copy. Same pipeline patterns I've operated in production at LGT, translated to Fabric's pipeline model.
+
+### 3.2 Landing to conformed
+
+Three stages, in order. Each is independently observable.
+
+**Stage A — Schema validation.** Spark notebook runs against the landed data. Validates: column presence, type conformance, null tolerances per column, referential keys, source freshness. Validation failures route to a quarantine table; downstream stages do not see invalid rows.
+
+**Stage B — Reconciliation.** Multi-source overlaps (the same company appearing in DealRoom, Capital IQ, and internal data) are reconciled deterministically. The pattern: surface conflicts rather than silently pick winners. A `reconciliation_status` column carries `clean`, `conflict_resolved`, or `conflict_flagged` per row, with the resolution path logged.
+
+**Stage C — Bitemporal load.** Conformed Delta tables are loaded with both `effective_date` (when the fact became true in the world) and `ingestion_date` (when it became known to the platform). Historical corrections (e.g., a funding round restated months after disclosure) are handled as Type-2 SCD updates with both dates tracked.
+
+### 3.3 Conformed to serving
+
+Serving workspaces read conformed Delta tables via OneLake shortcuts. No data copy. Each serving workspace exposes its own access surface — Warehouse views, semantic model, AI retrieval functions — without duplicating the underlying Delta storage.
+
+### 3.4 AI inference flow
+
+For an AI-driven workload (e.g., "summarise the funding history of company X in the context of similar companies in our portfolio"):
+
+1. **Structured retrieval.** Point-lookup against conformed Delta for company X's funding rounds, board, current investors.
+2. **Relational expansion.** Multi-hop query for portfolio companies in the same sector with comparable round histories.
+3. **Vector retrieval.** Optional — fetch related document embeddings (memos, news) for unstructured context.
+4. **Prompt construction.** Structured prompt template enforces source-attribution requirements on outputs. Every claim in the response must cite a specific source row.
+5. **LLM call.** Azure OpenAI with structured output schema (JSON schema enforcement).
+6. **Output validation.** Schema validation on the response. Citation validation — every cited row must exist in retrieval context. Schema or citation failures route to human review queue.
+7. **Audit logging.** Prompt version, model version, retrieval context hash, response, validation status logged to inference audit table.
+
+---
+
+## 4. Governance plane
+
+Governance is layered across every workspace, not concentrated in one.
+
+### 4.1 Workspace RBAC
+
+Three role tiers per workspace: Admin, Member, Viewer. Cross-workspace access is explicit (no implicit promotion). The conformed workspace gates everything downstream.
+
+### 4.2 Sensitivity labels
+
+Microsoft Purview sensitivity labels propagate through OneLake. Labels are applied at the table or column level in the conformed layer and inherited through shortcuts to serving workspaces. Power BI reports inherit and enforce labels on visuals.
+
+### 4.3 Lineage
+
+End-to-end lineage from external source through to BI visual or AI response is captured via Purview integration with Fabric. Lineage includes:
+- Data lineage — source → landing → conformed → serving
+- Inference lineage — for AI responses, the retrieval context, model version, and prompt version
+
+### 4.4 Domain organisation
+
+Investment Analytics is a Fabric **domain**. Domain-level governance allows the investment data estate to be separated from any other data estate the broader platform might serve — important for multi-business institutional contexts.
+
+### 4.5 Audit
+
+Three audit substrates:
+- **Data access audit** — who queried what, when (Fabric native).
+- **Inference audit** — every AI invocation with reproducibility metadata.
+- **Decision audit** — for BI consumers, which reports were viewed and exported; for AI consumers, which outputs were accepted, modified, or overridden.
+
+---
+
+## 5. Cross-cutting concerns
+
+### 5.1 CI/CD via Git
+
+Fabric items (notebooks, pipelines, semantic models, lakehouse definitions) are managed through Git integration. Deployment pipelines promote across Dev → Test → Prod workspace tiers. (This part is in progress in the implementation; design documented in [`infrastructure/deployment_pipelines.md`](../infrastructure/deployment_pipelines.md).)
+
+### 5.2 Capacity management
+
+Fabric capacity is allocated to workspaces with elasticity to handle ingestion bursts (e.g., quarterly bulk refreshes from external sources) without provisioning for peak permanently. The Warehouse serving workspace has independent capacity from the AI workspace because their cost models differ.
+
+### 5.3 Multi-tenancy (designed but not implemented)
+
+For a production multi-tenant deployment — e.g., a platform serving multiple investment teams within an institution, or multiple institutional customers — the architecture extends through:
+
+- Domain-per-tenant for governance isolation
+- Workspace-per-tenant within each domain for compute and storage isolation
+- Per-tenant encryption keys at the OneLake level
+- Mandatory tenant predicates at the serving layer (row-level security in Warehouse, role-based filtering in semantic models)
+- Tenant-scoped AI context — no cross-tenant retrieval, separate prompt-time scoping
+
+This is documented as design but not implemented in the portfolio build (which is single-tenant by design).
+
+---
+
+## 6. What this architecture deliberately does not do
+
+Listing the trade-offs explicitly:
+
+- **No real-time streaming.** External investment data sources are batch by nature (daily refreshes typical). Fabric Real-Time Intelligence is not engaged. Adding it would be straightforward for material event detection (M&A news, leadership change) but is not justified for the core analytics workflow.
+- **No fine-tuning.** The AI layer uses Azure OpenAI with prompting and structured outputs, not fine-tuned models. Fine-tuning would be the natural next step for domain vernacular precision; it's deferred to keep the portfolio scope tractable.
+- **No formal knowledge graph database.** Relational density is modelled in the conformed Delta layer with relationship tables and Spark graph operations. A dedicated graph database (Neo4j, Cosmos Gremlin) would be the production choice for sustained multi-hop traversal performance; the Delta-based approach is sufficient for portfolio scale.
+- **No physical multi-tenancy.** Single-tenant by design. Multi-tenancy is documented as extension path, not built.
+
+---
+
+## 7. Mapping to investment workflows
+
+The architecture supports the four core PE/VC workflows:
+
+- **Sourcing** — multi-source company discovery, semantic search over deal corpus, relationship-driven warm-intro identification.
+- **Screening** — structured filtering with bitemporal queries ("companies at Series A in Q1 2024 in our active sectors"), comparable-company analysis via graph traversal.
+- **Due diligence** — first-pass memo generation via AI layer over validated company data; analyst review and override loop.
+- **Portfolio monitoring** — recurring analytics on portfolio company performance, sector-level rollups, scenario analysis.
+
+Each workflow consumes the same conformed data layer through different serving paths (BI for portfolio monitoring, AI for memo generation, SQL/Warehouse for ad-hoc analytical queries).
+
+---
+
+*Last updated: May 2026. This is a living architectural document for an active portfolio project.*
