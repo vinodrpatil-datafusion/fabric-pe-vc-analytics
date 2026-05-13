@@ -153,7 +153,6 @@ fabric-pe-vc-analytics/
 ## Related work
 
 - **AI Business Analyst Agent** — Agentic AI architecture, complementary to this platform. [Repository](https://github.com/vinodrpatil-datafusion/ai-business-analyst-agent)
-- **LGT Capital Partners** — Production VC analytics platform delivery (Azure Synapse / ADF / Cosmos DB / Azure OpenAI). Not public, summarised on [LinkedIn](https://www.linkedin.com/in/vinodrpatil/).
 
 ## Contact
 
