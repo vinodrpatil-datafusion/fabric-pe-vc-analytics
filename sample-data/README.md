@@ -1,33 +1,24 @@
 # sample-data
 
-Committed synthetic PE/VC dataset, small-scale profile (~0.5 MB total).
+Committed synthetic landing feeds (small scale, seed 42). **All synthetic** — see `../SYNTHETIC_DATA.md`.
 
-**This data is synthetic.** See `../SYNTHETIC_DATA.md` for full context.
+> Files may be `.csv` if generated without `pyarrow`. Regenerate locally with pyarrow installed to produce `.parquet` (what Fabric shortcuts expect):
+> ```
+> cd ../data-generator && python generate.py --scale small --seed 42 --output ../sample-data
+> ```
 
-## Contents
+## Layout
 
-| File | Rows | Description |
-|---|---|---|
-| `funds.parquet` | 25 | Fund vehicles |
-| `limited_partners.parquet` | 80 | LP investors |
-| `lp_commitments.parquet` | ~200 | LP→fund commitments (M:N) |
-| `portfolio_companies.parquet` | ~270 | Investee companies |
-| `deals.parquet` | ~600 | Primary, follow-on, exit deals |
-| `valuations.parquet` | ~5,500 | Quarterly NAV marks |
-| `cashflows.parquet` | ~600 | Capital calls and distributions |
-
-## Regeneration
-
-```bash
-cd ../data-generator
-python generate.py --scale small --seed 42 --output ../sample-data
+```
+landing/
+├── dealroom/    External vendor feed (DealRoom-shaped)
+├── capitaliq/   External vendor feed (Capital IQ-shaped)
+└── internal/    Firm's own systems
+reference/
+├── vendor_id_mapping   canonical_id <-> {source, vendor_id}
+└── ground_truth_*      reconciliation oracle (NOT a feed)
 ```
 
-Deterministic output for `seed=42`. Lineage metadata (`_record_id`, `_batch_id`, etc.) differs between runs by design.
+The two external feeds deliberately disagree (existence / value / temporal conflicts) so the conformed reconciliation in WS2 has real work. `reference/ground_truth_*` is the oracle to score that reconciliation against — it is not ingested.
 
-## Lineage columns
-
-Every row carries seven `_`-prefixed metadata columns:
-- `_record_id`, `_source_system`, `_source_file`, `_ingestion_ts`, `_batch_id`, `_data_version`, `_is_synthetic`
-
-These survive Bronze → Silver → Gold promotion and align with Purview classification.
+Landing carries source-reported dates + `_`-prefixed ingestion metadata only. Bitemporal columns (`effective_date`, `ingestion_date`, `source_attribution`, `reconciliation_status`) are assigned in the conformed layer (WS2), not here.

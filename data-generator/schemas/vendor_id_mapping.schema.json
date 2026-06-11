@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VendorIdMapping",
+  "description": "Maps a source's vendor ID to the platform canonical ID. Per architecture.md §4, platform identity is decoupled from vendor identity.",
+  "type": "object",
+  "required": ["canonical_id", "entity_type", "source_system", "vendor_id"],
+  "properties": {
+    "canonical_id":  { "type": "string", "description": "Platform-internal stable ID (C-, R-, I-, INV-)." },
+    "entity_type":   { "enum": ["company", "funding_round", "investor", "investment"] },
+    "source_system": { "enum": ["dealroom", "capitaliq", "internal"] },
+    "vendor_id":     { "type": "string" }
+  }
+}

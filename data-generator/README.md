@@ -1,61 +1,69 @@
-# data-generator
+# data-generator (v2)
 
-Synthetic PE/VC dataset generator. Produces seven referentially-consistent entities as Parquet (default) or CSV files, with lineage metadata columns on every row.
+Generates synthetic **multi-source landing feeds** for the Investment Analytics domain, aligned to `../docs/data_model.md`. Produces controlled cross-source conflicts so the conformed-layer reconciliation (WS2) has real work.
 
-See `../SYNTHETIC_DATA.md` for full context on what is and isn't modelled.
+See `../SYNTHETIC_DATA.md` for the full data contract, conflict model, and limitations.
 
 ## Quick start
 
 ```bash
-# Install dependencies (no virtualenv required, but recommended)
-pip install -r requirements.txt
-
-# Generate small sample (~10 MB) into ../sample-data/
+pip install -r requirements.txt          # numpy, pandas, pyarrow
 python generate.py --scale small --seed 42 --output ../sample-data
-
-# Validate referential integrity and distribution realism
 python validate_output.py
 ```
 
-## CLI
+Writes **Parquet** when `pyarrow` is present, else **CSV** (Fabric shortcuts want Parquet — regenerate locally with pyarrow installed).
+
+## Output tree
 
 ```
-python generate.py [--scale {small,medium,large}] [--seed INT] [--output PATH] [--format {parquet,csv,both}]
+sample-data/
+├── landing/
+│   ├── dealroom/    companies funding_rounds investors investments
+│   ├── capitaliq/   companies funding_rounds investors investments
+│   └── internal/    people deals documents
+└── reference/
+    ├── vendor_id_mapping        canonical_id <-> {source, vendor_id}
+    └── ground_truth_*           reconciliation oracle (NOT a feed)
 ```
 
-| Scale | Funds | LPs | Companies | Valuations | Approx size (Parquet) |
+Maps to `../infrastructure/workspace_layout.md` → `ws-ingestion-dev/landing_lakehouse`.
+
+## Entities → data_model.md
+
+| Generated | data_model.md | Sourcing |
+|---|---|---|
+| companies | §1.1 | dealroom + capitaliq (reconciled) |
+| funding_rounds | §1.2 | dealroom + capitaliq (reconciled) |
+| investors | §1.3 | dealroom + capitaliq (reconciled) |
+| investments | §1.4 | dealroom + capitaliq (reconciled) |
+| people | §1.5 | internal |
+| deals | §1.6 | internal |
+| documents | §1.7 | internal |
+| reconciliation_log | §1.8 | **not generated** — WS2 output |
+
+## Scale
+
+| Scale | Companies | Investors | People | Rounds (approx) | Size |
 |---|---|---|---|---|---|
-| small | 25 | 80 | ~270 | ~5,500 | ~0.5 MB |
-| medium | 80 | 250 | ~1,200 | ~24,000 | ~3 MB |
-| large | 250 | 600 | ~4,500 | ~90,000 | ~10 MB |
+| small | 200 | 120 | 400 | ~450 | ~1.2 MB |
+| medium | 800 | 350 | 1500 | ~1800 | ~5 MB |
+| large | 2500 | 900 | 4500 | ~5600 | ~16 MB |
 
 ## Package layout
 
 ```
-data-generator/
-├── generate.py                CLI entrypoint
-├── validate_output.py         Post-generation integrity and realism checks
-├── requirements.txt
-├── schemas/                   JSON Schema per entity
-└── pevc_generator/
-    ├── __init__.py
-    ├── lineage.py             Lineage metadata + attach_lineage helper
-    ├── reference.py           Distributions, weights, reference data
-    ├── scale.py               Small/medium/large profile definitions
-    ├── funds.py               Fund entity generation
-    ├── lps.py                 LP entities and LP-fund commitments
-    ├── companies.py           Portfolio companies with sector/geo skew
-    └── deals.py               Deals, valuations, cashflows (the time-series heart)
+pevc_generator/
+├── io_utils.py    Parquet/CSV writer, JSON-string nested cols
+├── names.py       Curated PE/VC name banks (no faker dependency)
+├── reference.py   Vocabularies + SOURCE_PROFILES (conflict config)
+├── lineage.py     Landing metadata
+├── scale.py       small / medium / large
+├── canonical.py   Ground-truth oracle (the 'real world')
+├── sources.py     Project oracle -> per-source feeds with conflicts
+└── internal.py    Internal pipeline (deals) + documents
 ```
 
-## Reproducibility
+## Tuning conflicts
 
-Output is deterministic given a fixed `--seed`. The committed sample uses `seed=42`. Same seed + same scale = byte-identical Parquet output (modulo `_record_id`, `_ingestion_ts`, `_batch_id` which are intentionally per-run).
-
-## Lineage columns
-
-Every row carries the seven `_`-prefixed columns documented in `SYNTHETIC_DATA.md`. These are designed for Purview classification in WS7.
-
-## Next workstream
-
-WS2 ingests these files into a Fabric Lakehouse as the Bronze layer. See `../docs/architecture.md` (when published).
+Edit `SOURCE_PROFILES` in `reference.py` (`coverage`, `announce_lag_*`, `amount_noise_*`, `edge_drop_p`, …). Re-run `validate_output.py` to see the resulting rates.

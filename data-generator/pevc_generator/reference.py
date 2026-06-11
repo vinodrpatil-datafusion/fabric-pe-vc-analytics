@@ -1,122 +1,120 @@
-"""Reference data and weighted distributions for PE/VC realism.
+"""Reference data, controlled vocabularies, and conflict-injection config.
 
-These weights are the credibility gate. A PE tech lead will spot
-uniform-random sector allocation immediately, so the distributions
-below are deliberately skewed to match real-world PE concentration.
+Vocabularies align with data_model.md enums. Conflict rates drive the
+multi-source projection so WS2's 02_reconciliation.py has realistic
+value/temporal/existence disagreements to surface.
 """
 
 from __future__ import annotations
 
-# Fund strategies — buyout dominates by AUM but VC counts more funds
-FUND_STRATEGIES = ["Buyout", "Growth Equity", "Venture Capital", "Secondaries"]
-FUND_STRATEGY_WEIGHTS = [0.45, 0.20, 0.30, 0.05]
+from dataclasses import dataclass, field
 
-# Strategy → (size_lognormal_mean_log_usd_m, size_lognormal_sigma)
-# Calibrated so medians look right: Buyout ~$1.5B, Growth ~$500M, VC ~$250M, Secondaries ~$2B
-STRATEGY_SIZE_PARAMS = {
-    "Buyout": (7.3, 0.8),
-    "Growth Equity": (6.2, 0.7),
-    "Venture Capital": (5.5, 0.9),
-    "Secondaries": (7.6, 0.6),
+# --- Sector taxonomy (data_model 1.1: multi-tag) ---
+# Grouped for name generation; tags are the leaf labels stored in sector_taxonomy[].
+SECTOR_GROUPS = {
+    "Information Technology": ["SaaS", "AI/ML", "Cybersecurity", "DevTools", "Data Infrastructure", "Fintech Infra"],
+    "Healthcare": ["Digital Health", "Biotech", "Medical Devices", "Diagnostics", "Genomics"],
+    "Financials": ["Fintech", "Payments", "Lending", "InsurTech", "WealthTech"],
+    "Consumer": ["Consumer Apps", "E-commerce", "Marketplace", "Food & Bev", "Gaming"],
+    "Industrials": ["Robotics", "Supply Chain", "Manufacturing Tech", "Logistics"],
+    "Energy": ["Energy Storage", "Grid Tech", "Oil & Gas Tech"],
+    "Climate": ["Carbon Capture", "Clean Energy", "Sustainability"],
+    "Mobility": ["AV/Autonomy", "EV", "Micromobility", "Fleet"],
+}
+SECTOR_GROUP_NAMES = list(SECTOR_GROUPS.keys())
+SECTOR_GROUP_WEIGHTS = [0.30, 0.18, 0.14, 0.12, 0.09, 0.06, 0.06, 0.05]
+
+# --- Round types (data_model 1.2) ---
+ROUND_TYPES = ["Pre-Seed", "Seed", "Series A", "Series B", "Series C", "Series D", "Series E", "Bridge", "Growth"]
+# Typical progression weights for a company's first round
+FIRST_ROUND_WEIGHTS = {"Pre-Seed": 0.25, "Seed": 0.45, "Series A": 0.20, "Bridge": 0.05, "Growth": 0.05}
+
+INSTRUMENT_TYPES = ["Equity", "Convertible Note", "SAFE"]
+INSTRUMENT_WEIGHTS = [0.62, 0.20, 0.18]
+
+CURRENCIES = ["USD", "EUR", "GBP"]
+CURRENCY_WEIGHTS = [0.68, 0.22, 0.10]
+
+# --- Investor types (data_model 1.3) ---
+INVESTOR_TYPES = [
+    "vc_fund", "pe_fund", "corporate_vc", "family_office",
+    "sovereign_fund", "angel", "accelerator", "strategic",
+]
+INVESTOR_TYPE_WEIGHTS = [0.42, 0.10, 0.10, 0.08, 0.04, 0.14, 0.06, 0.06]
+
+STAGE_FOCUS = ["Pre-Seed", "Seed", "Early", "Growth", "Late"]
+GEO_FOCUS = ["North America", "Europe", "Asia", "MENA", "LatAm", "Global"]
+
+# --- Exit (data_model 1.4) ---
+EXIT_TYPES = ["acquisition", "ipo", "secondary_sale", "write_off"]
+EXIT_TYPE_WEIGHTS = [0.55, 0.12, 0.18, 0.15]
+
+# --- Internal deal pipeline (data_model 1.6) ---
+DEAL_STAGES = ["sourcing", "screening", "due_diligence", "ic_review", "closing", "closed_won", "closed_lost", "passed"]
+IC_OUTCOMES = ["approved", "rejected", "deferred"]
+
+# --- Documents (data_model 1.7) ---
+DOCUMENT_TYPES = ["ic_memo", "dd_report", "news_article", "transcript", "vendor_report", "analyst_note"]
+DOCUMENT_TYPE_WEIGHTS = [0.18, 0.15, 0.30, 0.10, 0.12, 0.15]
+SENSITIVITY_LABELS = ["Public", "Internal", "Confidential", "Highly Confidential"]
+
+COUNTRIES = [
+    "United States", "United Kingdom", "Germany", "France", "Netherlands",
+    "Sweden", "India", "Singapore", "Canada", "Israel", "Australia",
+]
+COUNTRY_WEIGHTS = [0.46, 0.11, 0.08, 0.05, 0.04, 0.03, 0.06, 0.05, 0.05, 0.04, 0.03]
+
+# --- Sources ---
+SOURCE_DEALROOM = "dealroom"
+SOURCE_CAPITALIQ = "capitaliq"
+SOURCE_INTERNAL = "internal"
+EXTERNAL_SOURCES = [SOURCE_DEALROOM, SOURCE_CAPITALIQ]
+
+VENDOR_ID_PREFIX = {
+    SOURCE_DEALROOM: "DR",
+    SOURCE_CAPITALIQ: "CIQ",
+    SOURCE_INTERNAL: "INT",
 }
 
-FUND_CURRENCIES = ["USD", "EUR", "GBP"]
-FUND_CURRENCY_WEIGHTS = [0.70, 0.22, 0.08]
 
-# GP names — fictional, neutral, plausible
-GP_NAMES = [
-    "Meridian Capital Partners",
-    "Northwind Equity",
-    "Atlas Bridge Partners",
-    "Helios Growth",
-    "Korbel Ventures",
-    "Stonepath Capital",
-    "Verdant Partners",
-    "Westgate Equity",
-    "Quill & Stone Capital",
-    "Ironside Partners",
-    "Lighthouse Growth",
-    "Cobalt Lane Capital",
-]
+@dataclass(frozen=True)
+class SourceProfile:
+    """Per-source behaviour controlling coverage and conflict injection."""
+    name: str
+    coverage: float                 # P(this source covers a given canonical company)
+    announce_lag_mean: float        # mean days between true close and reported announcement
+    announce_lag_std: float
+    valuation_disclosure: float     # P(valuation fields populated)
+    amount_noise_p: float           # P(amount_raised deviates from truth)
+    amount_noise_range: tuple       # multiplicative deviation range when noisy
+    lead_alter_p: float             # P(lead investor set altered)
+    participation_disclosure: float # P(investment participation_amount populated)
+    edge_drop_p: float              # P(an investor-round edge missing in this source)
 
-# LP types — PE-realistic mix
-LP_TYPES = [
-    "Pension Fund",
-    "Sovereign Wealth Fund",
-    "Endowment",
-    "Family Office",
-    "Fund of Funds",
-    "Insurance",
-]
-LP_TYPE_WEIGHTS = [0.32, 0.10, 0.15, 0.20, 0.13, 0.10]
 
-# LP domiciles
-LP_DOMICILES = [
-    "United States",
-    "Canada",
-    "United Kingdom",
-    "Germany",
-    "Switzerland",
-    "Netherlands",
-    "Singapore",
-    "United Arab Emirates",
-    "Australia",
-    "Japan",
-]
-LP_DOMICILE_WEIGHTS = [0.32, 0.05, 0.12, 0.08, 0.07, 0.05, 0.08, 0.07, 0.05, 0.11]
+DEALROOM_PROFILE = SourceProfile(
+    name=SOURCE_DEALROOM,
+    coverage=0.88,
+    announce_lag_mean=18.0, announce_lag_std=14.0,
+    valuation_disclosure=0.55,
+    amount_noise_p=0.15, amount_noise_range=(0.70, 1.30),
+    lead_alter_p=0.06,
+    participation_disclosure=0.32,
+    edge_drop_p=0.10,
+)
+CAPITALIQ_PROFILE = SourceProfile(
+    name=SOURCE_CAPITALIQ,
+    coverage=0.82,
+    announce_lag_mean=44.0, announce_lag_std=20.0,
+    valuation_disclosure=0.72,
+    amount_noise_p=0.10, amount_noise_range=(0.82, 1.18),
+    lead_alter_p=0.05,
+    participation_disclosure=0.40,
+    edge_drop_p=0.08,
+)
+SOURCE_PROFILES = {SOURCE_DEALROOM: DEALROOM_PROFILE, SOURCE_CAPITALIQ: CAPITALIQ_PROFILE}
 
-# Sectors — weighted to PE concentration (tech and healthcare dominate)
-SECTORS = [
-    "Information Technology",
-    "Healthcare",
-    "Financials",
-    "Consumer Discretionary",
-    "Industrials",
-    "Communication Services",
-    "Consumer Staples",
-    "Energy",
-    "Materials",
-    "Real Estate",
-    "Utilities",
-]
-SECTOR_WEIGHTS = [0.28, 0.18, 0.10, 0.11, 0.10, 0.07, 0.05, 0.04, 0.03, 0.02, 0.02]
-
-# Geography weights for portfolio companies — North America heavy
-COMPANY_COUNTRIES = [
-    "United States",
-    "Canada",
-    "United Kingdom",
-    "Germany",
-    "France",
-    "Netherlands",
-    "Sweden",
-    "India",
-    "Singapore",
-    "Australia",
-    "Israel",
-]
-COMPANY_COUNTRY_WEIGHTS = [
-    0.50, 0.06, 0.10, 0.07, 0.05, 0.04, 0.03, 0.05, 0.04, 0.03, 0.03,
-]
-
-# Deal types
-DEAL_TYPES = ["Primary", "Follow-On", "Exit"]
-
-# Valuation methods (for marks)
-VALUATION_METHODS = ["DCF", "Comparable Companies", "Comparable Transactions", "Last Round"]
-VALUATION_METHOD_WEIGHTS = [0.35, 0.30, 0.20, 0.15]
-
-# Company status
-COMPANY_STATUS = ["Active", "Exited", "Written Off"]
-
-# Vintage range — covers a credible PE history window
-VINTAGE_MIN = 2010
-VINTAGE_MAX = 2024
-
-# Fund lifecycle stage thresholds (years from vintage)
-LIFECYCLE_STAGES = [
-    (0, 1, "Fundraising"),
-    (1, 4, "Investment"),
-    (4, 8, "Harvesting"),
-    (8, 99, "Winding Down"),
-]
+# Reconciliation tolerances (used by validation to label emergent conflicts;
+# WS2 02_reconciliation.py will apply its own, these are for generator self-check)
+AMOUNT_DISAGREE_TOLERANCE = 0.05    # >5% relative difference = value_disagreement
+ANNOUNCE_DISAGREE_DAYS = 30         # >30 days apart = temporal_disagreement

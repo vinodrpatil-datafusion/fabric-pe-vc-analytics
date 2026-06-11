@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LandingCompany",
+  "description": "Raw company record as delivered by an external vendor feed (dealroom/capitaliq). Pre-conformance: no effective_date/reconciliation_status (assigned in conformed layer).",
+  "type": "object",
+  "required": ["vendor_company_id", "legal_name", "sector_taxonomy", "founded_date", "country"],
+  "properties": {
+    "vendor_company_id": { "type": "string", "description": "Source-specific ID; maps to canonical via vendor_id_mapping." },
+    "legal_name":        { "type": "string" },
+    "sector_taxonomy":   { "type": "string", "description": "JSON array string of sector tags." },
+    "founded_date":      { "type": "string", "format": "date" },
+    "country":           { "type": "string" },
+    "description":       { "type": "string" },
+    "_record_id":     { "type": "string" },
+    "_source_system": { "enum": ["dealroom", "capitaliq"] },
+    "_source_file":   { "type": "string" },
+    "_ingestion_ts":  { "type": "string", "format": "date-time" },
+    "_batch_id":      { "type": "string" },
+    "_data_version":  { "type": "string" },
+    "_is_synthetic":  { "type": "boolean", "const": true }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LandingFundingRound",
+  "description": "Raw funding round as delivered by an external vendor. Carries announced_date (source-reported); effective close date is resolved in conformance.",
+  "type": "object",
+  "required": ["vendor_round_id", "vendor_company_id", "round_type", "announced_date", "amount_raised", "currency"],
+  "properties": {
+    "vendor_round_id":         { "type": "string" },
+    "vendor_company_id":       { "type": "string" },
+    "round_type":              { "enum": ["Pre-Seed", "Seed", "Series A", "Series B", "Series C", "Series D", "Series E", "Bridge", "Growth"] },
+    "announced_date":          { "type": "string", "format": "date" },
+    "amount_raised":           { "type": "number", "minimum": 0 },
+    "currency":                { "enum": ["USD", "EUR", "GBP"] },
+    "pre_money_valuation":     { "type": ["number", "null"], "minimum": 0 },
+    "post_money_valuation":    { "type": ["number", "null"], "minimum": 0 },
+    "instrument_type":         { "enum": ["Equity", "Convertible Note", "SAFE"] },
+    "lead_investor_vendor_ids":{ "type": "string", "description": "JSON array string of vendor investor IDs (may be empty if source failed to identify lead)." },
+    "_record_id":     { "type": "string" },
+    "_source_system": { "enum": ["dealroom", "capitaliq"] },
+    "_source_file":   { "type": "string" },
+    "_ingestion_ts":  { "type": "string", "format": "date-time" },
+    "_batch_id":      { "type": "string" },
+    "_data_version":  { "type": "string" },
+    "_is_synthetic":  { "type": "boolean", "const": true }
+  }
+}
