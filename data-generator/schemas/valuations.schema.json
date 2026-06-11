@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Valuation",
+  "description": "A quarterly NAV mark for a portfolio company holding.",
+  "type": "object",
+  "required": ["valuation_id", "fund_id", "company_id", "valuation_date", "fair_value_m", "valuation_method", "currency"],
+  "properties": {
+    "valuation_id":     { "type": "string", "pattern": "^VAL-\\d{7}$" },
+    "fund_id":          { "type": "string", "pattern": "^FUND-\\d{4}$" },
+    "company_id":       { "type": "string", "pattern": "^CO-\\d{5}$" },
+    "valuation_date":   { "type": "string", "format": "date" },
+    "fair_value_m":     { "type": "number", "minimum": 0 },
+    "valuation_method": { "enum": ["DCF", "Comparable Companies", "Comparable Transactions", "Last Round"] },
+    "currency":         { "enum": ["USD", "EUR", "GBP"] },
+    "_record_id":     { "type": "string", "format": "uuid" },
+    "_source_system": { "type": "string" },
+    "_source_file":   { "type": "string" },
+    "_ingestion_ts":  { "type": "string", "format": "date-time" },
+    "_batch_id":      { "type": "string", "format": "uuid" },
+    "_data_version":  { "type": "string" },
+    "_is_synthetic":  { "type": "boolean", "const": true }
+  }
+}

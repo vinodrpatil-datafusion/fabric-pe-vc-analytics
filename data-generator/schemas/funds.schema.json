@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fund",
+  "description": "A PE/VC fund vehicle managed by a General Partner.",
+  "type": "object",
+  "required": [
+    "fund_id", "fund_name", "gp_name", "strategy", "vintage",
+    "target_size_m", "committed_capital_m", "currency", "lifecycle_stage"
+  ],
+  "properties": {
+    "fund_id":             { "type": "string", "pattern": "^FUND-\\d{4}$" },
+    "fund_name":           { "type": "string" },
+    "gp_name":             { "type": "string" },
+    "strategy":            { "enum": ["Buyout", "Growth Equity", "Venture Capital", "Secondaries"] },
+    "vintage":             { "type": "integer", "minimum": 2010, "maximum": 2024 },
+    "target_size_m":       { "type": "number", "minimum": 0 },
+    "committed_capital_m": { "type": "number", "minimum": 0 },
+    "currency":            { "enum": ["USD", "EUR", "GBP"] },
+    "lifecycle_stage":     { "enum": ["Fundraising", "Investment", "Harvesting", "Winding Down"] },
+    "_record_id":          { "type": "string", "format": "uuid" },
+    "_source_system":      { "type": "string" },
+    "_source_file":        { "type": "string" },
+    "_ingestion_ts":       { "type": "string", "format": "date-time" },
+    "_batch_id":           { "type": "string", "format": "uuid" },
+    "_data_version":       { "type": "string" },
+    "_is_synthetic":       { "type": "boolean", "const": true }
+  }
+}
