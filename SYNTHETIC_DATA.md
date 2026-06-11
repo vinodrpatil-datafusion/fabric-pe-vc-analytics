@@ -20,6 +20,7 @@ Three feeds, mapping to `workspace_layout.md` → `ws-ingestion-dev/landing_lake
 
 Plus `reference/`:
 - `vendor_id_mapping` — canonical ID ↔ {source, vendor_id}, per `architecture.md` §4. Entity resolution is treated as already solved (a maintained mapping table); WS2 reconciliation focuses on *attribute* conflicts, not fuzzy matching. **Explicit simplification.**
+- `expected_conflicts` — oracle ledger of every cross-source conflict with its true type (and `genuine_dispute`/`coverage_gap` subtype for existence). Lets WS2 reconciliation be *scored*, not just executed.
 - `ground_truth_*` — the canonical "real world" oracle. **Not a landing feed.** Provided so WS2 reconciliation can be *scored* (did it recover the truth?), not just executed.
 
 ## Conflicts (the point of the multi-source design)
@@ -28,17 +29,22 @@ The two external feeds disagree at controlled rates so `02_reconciliation.py` (W
 
 | Conflict type | Mechanism | Observed (small, seed 42) |
 |---|---|---|
-| `existence_disagreement` (company) | Independent coverage draws per source | ~31% single-source |
+| `existence_disagreement` (company) | Independent coverage draws per source | ~32% single-source (coverage-gap) |
 | `value_disagreement` | Source-specific noise on `amount_raised`; lead-investor alteration | ~24% of shared rounds |
 | `temporal_disagreement` | `announced_date` = true close + source-specific lag | ~38% of shared rounds |
-| `existence_disagreement` (investment edge) | Per-edge drop + company coverage gaps | ~41% of edge union |
+| `existence_disagreement` (edge, **genuine**) | Edge dropped by one source when **both** cover the company | ~13% of edges |
+| `existence_disagreement` (edge, coverage-gap) | Edge absent only because one source never covered the company | ~29% of edges |
 
 Rates are tunable in `pevc_generator/reference.py` (`SOURCE_PROFILES`).
 
+### Expected-conflicts ledger (reconciliation oracle)
+
+`reference/expected_conflicts` labels every cross-source conflict by `entity_type`, `canonical_id`, `conflict_type` (within the `reconciliation_log` enum), and — for existence conflicts — an `existence_subtype` of `genuine_dispute` or `coverage_gap`. WS2's `02_reconciliation.py` is scored against this: did it detect the genuine disputes, and did it correctly *not* flag coverage gaps as disputes?
+
 ### Known calibration caveats (honest limitations)
 
-1. **Company existence ~31% is high** for two premium vendors that in reality overlap tightly. Independent coverage draws overstate divergence. Acceptable for a demo (visible reconciliation work); tune `coverage` up and correlate the draws for stricter realism.
-2. **Investment-edge existence ~41% conflates two causes**: a genuinely disputed edge vs. an edge invisible because the source never covered the company. The conformed layer should distinguish these; the generator currently lumps them. Fix candidate before WS2 reconciliation is finalised. Confidence this matters: 7/10.
+1. **Company existence ~32% is high** for two premium vendors that in reality overlap tightly. Independent coverage draws overstate divergence. Acceptable for a demo (visible reconciliation work); tune `coverage` up and correlate the draws for stricter realism.
+2. **Edge-existence conflation — RESOLVED.** Genuine edge disputes (~13%) are now distinct from coverage-driven gaps (~29%). Edge-drop is applied only to companies both sources cover, so a one-source edge on a both-covered company is unambiguously a dispute; the `expected_conflicts` ledger records the distinction.
 3. **Entity resolution is assumed solved** via `vendor_id_mapping`. Real platforms must fuzzy-match across vendors. Documented as out of scope, consistent with `architecture.md` §4.
 
 ## Bitemporal boundary

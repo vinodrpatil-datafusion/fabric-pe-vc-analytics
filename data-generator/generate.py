@@ -27,6 +27,7 @@ import pandas as pd
 from pevc_generator import LineageContext, PROFILES
 from pevc_generator import reference as R
 from pevc_generator.canonical import generate_canonical
+from pevc_generator.conflicts import derive_expected_conflicts
 from pevc_generator.internal import generate_internal
 from pevc_generator.io_utils import OUTPUT_EXT, write_table
 from pevc_generator.lineage import attach_landing_lineage
@@ -99,6 +100,13 @@ def main() -> int:
     p = write_table(df_map, reference, "vendor_id_mapping")
     total += p.stat().st_size
     print(f"  reference/vendor_id_mapping       rows={len(df_map):>6,d}")
+
+    # expected_conflicts ledger (oracle for WS2 reconciliation scoring)
+    ledger = derive_expected_conflicts(canonical, feeds)
+    df_led = pd.DataFrame(ledger)
+    p = write_table(df_led, reference, "expected_conflicts")
+    total += p.stat().st_size
+    print(f"  reference/expected_conflicts      rows={len(df_led):>6,d}")
 
     # ground truth oracle (clearly labelled, not a feed)
     for entity in ("companies", "funding_rounds", "investors", "investments", "people"):

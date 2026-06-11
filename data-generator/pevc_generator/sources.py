@@ -147,10 +147,15 @@ def project_sources(canonical: dict, rng: np.random.Generator) -> dict:
     # --- Investments ---
     for inv in investments:
         co_sources = coverage[inv["company_id"]]
+        both_covered = len(co_sources) == len(R.EXTERNAL_SOURCES)
         for src in co_sources:
             prof = R.SOURCE_PROFILES[src]
-            if rng.random() < prof.edge_drop_p:
-                continue  # existence disagreement at the edge level
+            # Edge drop only applies when BOTH sources cover the company: then a
+            # one-source edge is a GENUINE dispute. For single-covered companies we
+            # emit all edges (their one-source presence is a coverage gap, not a
+            # dispute) — this keeps the two existence causes cleanly separable.
+            if both_covered and rng.random() < prof.edge_drop_p:
+                continue  # genuine edge-level existence disagreement
             ctr[src]["INV"] += 1
             vid = _vendor_id(src, "INVT", ctr[src]["INV"])
             mapping_rows.append({"canonical_id": inv["investment_id"], "entity_type": "investment",
@@ -173,6 +178,7 @@ def project_sources(canonical: dict, rng: np.random.Generator) -> dict:
             })
 
     feeds["vendor_id_mapping"] = mapping_rows
+    feeds["_coverage"] = {cid: sorted(srcs) for cid, srcs in coverage.items()}
     return feeds
 
 
