@@ -33,6 +33,13 @@ This project models that shape end-to-end on Fabric. It's not a production syste
 
 The architectural patterns scale. The implementation here is sized for portfolio demonstration, not enterprise deployment.
 
+**A specific simplification — ingestion:** this build uses uploaded Parquet files
+for landing, not OneLake shortcuts to external storage (`design_decisions.md`
+DD-02). Shortcuts require an external ADLS Gen2 source to point at; the trial
+build's synthetic data is uploaded directly. The validation, reconciliation, and
+conformance logic downstream is identical either way — only the landing
+mechanism differs.
+
 ## Architecture at a glance
 
 ```
@@ -129,11 +136,13 @@ fabric-pe-vc-analytics/
 │   └── deployment_pipelines.md   CI/CD approach (in progress)
 ├── pipelines/
 │   ├── ingestion/                Fabric Data Pipelines (placeholder)
-│   └── transformation/           Spark / Dataflow Gen2 logic
+│   └── transformation/           Spark / Dataflow Gen2 logic (future, beyond notebooks/)
 ├── notebooks/
-│   ├── 01_landing_validation.py  Schema validation against shortcuts
-│   ├── 02_conformed_build.py     Delta build with reconciliation
-│   └── 03_serving_views.sql      Warehouse views for analytics
+│   ├── README.md                        Stage map, reconciliation policy, run instructions
+│   ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
+│   ├── 02_reconciliation.ipynb          Stage B — multi-source conflict resolution
+│   ├── 03_bitemporal_load.ipynb         Stage C — effective/ingestion dates + SCD2
+│   └── 04_data_quality_assertions.ipynb Stage D — referential integrity certification
 └── semantic_model/
     └── investment_analytics.bim  Power BI semantic model (DirectLake)
 ```
@@ -144,7 +153,7 @@ fabric-pe-vc-analytics/
 |---|---|---|
 | Architecture v1 | ✅ Complete | Documented in `docs/` |
 | Workspace layout & domain setup | ✅ Complete | Trial tenant |
-| Conformed Delta build with bitemporal modelling | 🔨 In progress | |
+| Conformed Delta build with bitemporal modelling | ✅ Complete | 4-stage pipeline (`notebooks/`); reconciliation scored 1.000/1.000 against synthetic conflict oracle |
 | DirectLake semantic model | 🔨 In progress | |
 | Azure OpenAI integration layer | 📋 Planned | |
 | Deployment pipelines (CI/CD via Git) | 📋 Planned | |
@@ -164,4 +173,4 @@ This is part of an active practice in Enterprise AI & Data Architecture for fina
 
 ---
 
-*Last updated: May 2026. This project is under active development; design documents may evolve.*
+*Last updated: June 2026. This project is under active development; design documents may evolve.*
