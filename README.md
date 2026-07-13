@@ -166,7 +166,7 @@ fabric-pe-vc-analytics/
 | Architecture v1 | ✅ Complete | Documented in `docs/` |
 | Workspace/domain setup | ✅ Complete (as-built ≠ target) | Single workspace `pevc-dev` under the `Investment Analytics` domain (DD-14); the documented workspace-per-layer target (DD-10) isn't provisioned |
 | Conformed Delta build with bitemporal modelling | ✅ Complete | 4-stage pipeline (`notebooks/`); reconciliation scored 1.000/1.000 against synthetic conflict oracle |
-| Gold star schema (Lakehouse Delta) | ⬜ Not started | |
+| Gold star schema (Lakehouse Delta) | 🔨 In progress | Grain accepted (DD-15); `notebooks/05_gold_star_schema.ipynb` written, not yet executed against Fabric |
 | DirectLake semantic model | ⬜ Not started | No `semantic_model/` artefact yet |
 | Azure OpenAI integration layer | 📐 Designed | Fusion agent pattern committed in `docs/design_decisions.md` DD-13; not yet built |
 | Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Dev-only at portfolio scope |

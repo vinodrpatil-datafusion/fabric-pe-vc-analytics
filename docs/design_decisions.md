@@ -374,4 +374,93 @@ unchanged for that context — it just isn't the context this portfolio build is
 
 ---
 
+## DD-15. Gold star schema grain (WS3)
+
+**Status:** Accepted 2026-07-13 (proposed and confirmed with the maintainer same day).
+This is a grain decision — hard to reverse once a notebook and downstream DAX measures
+(S2) are built on it — so it was recorded and reviewed before any code was written, per
+the session protocol.
+
+**Choice:** One fact table at portfolio scope, four dimensions, all Type-2 (SCD2)
+where the source data supports it:
+
+- **`fact_investment`** — grain: one row per `investment_id` (current version only,
+  i.e. built from `conformed_investments` where `is_current = true`). ~848 rows in the
+  sample dataset. This is the atomic, non-additive-risk grain: every LP measure
+  (MOIC, sector concentration, vintage performance, co-investment counts) rolls up from
+  here by aggregating over `dim_investor`/`dim_company`/`dim_date`, rather than needing
+  a second, coarser fact.
+- **`dim_company`** — Type 2, sourced from `conformed_companies`' existing
+  `valid_from`/`valid_to`/`is_current` envelope. `conformed_companies` only carries the
+  genuinely multi-valued `sector_taxonomy` array (e.g. `['Cybersecurity', 'AI/ML']`) —
+  there is no single-valued category column in the landing feed or the conformed table.
+  `dim_company` derives one, `sector_group`, as the primary slicing attribute for
+  sector-concentration measures: matched via a small taxonomy lookup embedded in the
+  Gold notebook (the same 8-group → leaf-tag vocabulary `data-generator/pevc_generator/
+  reference.py` uses — a fixed vocabulary, not per-company synthetic data, so reusing it
+  isn't leaking oracle information). This is a documented shortcut: a real vendor feed
+  would ship this taxonomy as its own reference table rather than have it hardcoded in
+  a Gold-layer notebook; that's the "when you'd change it" case if this were productionised.
+  `sector_taxonomy` itself is carried through as an array attribute but not broken into
+  a bridge table in this pass.
+- **`dim_investor`** — Type 2, sourced from `conformed_investors`. Carries
+  `vintage_year`, `fund_size`, `investor_type`, `stage_focus` — what vintage-performance
+  and fund-level rollups group by.
+- **`dim_date`** — standard day-grain calendar dimension spanning the observed
+  `founded_date`/round `effective_date` range plus a forward buffer. No fiscal-calendar
+  variant — not needed at this scope.
+
+**Point-in-time join (why Type 2, not Type 1, dims):** the certification gate requires
+a sample "as-of" query to return correct historical results. `fact_investment` rows are
+stamped with the `company_sk`/`investor_sk` version that was **current at the
+investment's `effective_date`** — a proper Kimball point-in-time join at build time, not
+a join to whatever is current today. A genuinely historical "as of an arbitrary past
+date" query (not just as-of-the-investment-date) still needs to re-join `dim_company`
+on its `valid_from`/`valid_to` window directly rather than trust the fact's stamped
+surrogate key — that's a query pattern to demonstrate in the certification-gate sample
+query, not something the stamped key alone provides.
+
+**Rejected: a second "fund performance snapshot" fact.** The session plan named this as
+a target alongside investment-level facts. Not building it, because the conformed layer
+has no periodic valuation source to snapshot: `conformed_investments` carries
+`participation_amount` (cost basis) and `realised_return_multiple` (populated **only
+post-exit** — 298 of 848 investments in the sample, ~35%; the other 65% are still held
+with no fair-value mark at all). A snapshot fact built on that would either be empty for
+most rows or silently conflate cost basis with value, which is worse than not having it.
+`data_model.md` §5 already anticipated this: fund-level aggregates are meant to be
+computed, not pre-stored. Fund/vintage rollups (MOIC, sector concentration, vintage
+performance) become DAX measures over `fact_investment` in S2.
+
+**NAV needs an explicit proxy caveat, not a fact table.** S2's measure list includes
+NAV. There is no real NAV in this dataset — only cost basis (open positions) and
+realised proceeds (exited positions). Any "NAV" measure S2 defines must be documented as
+a **proxy** (e.g. `SUM(participation_amount)` for open positions, actual proceeds for
+exited ones) with the same honesty-note treatment this repo already gives the IRR proxy
+— not presented as a real fair-market NAV. Flagging this now so S2 doesn't inherit an
+unstated assumption.
+
+**Rejected: separate `dim_round`.** Round-level questions ("how many investors backed
+this round") are answerable by grouping `fact_investment` on `round_id`. Round
+attributes (`round_type`, `instrument_type`, `amount_raised`, `pre_money_valuation`,
+`post_money_valuation`) are carried as degenerate dimension columns directly on
+`fact_investment` rather than normalised into their own dimension — at 848 rows there's
+no query-performance case for it, and it avoids a table whose only job is holding a
+handful of repeated strings.
+
+**Rejected: sector bridge table (multi-valued `sector_taxonomy`).** Confirmed
+genuinely multi-valued in the source data, so a proper Kimball bridge table
+(`bridge_company_sector`) is the technically correct answer for multi-tag concentration
+analysis. Deferred because the derived `sector_group` (single-valued, via the taxonomy
+lookup above) covers the LP-vantage sector-concentration measure adequately for
+portfolio scope, and a bridge table adds a many-to-many relationship to manage in the
+semantic model (S2) for marginal analytical gain at this data volume. **When you'd add
+it:** if concentration analysis needs to reflect a company's full multi-sector tagging
+rather than its primary group.
+
+**Surrogate keys:** deterministic hash of `(natural_key, valid_from)`, not an
+auto-increment identity — re-running the notebook must be idempotent, consistent with
+this repo's `seed=42` reproducibility discipline elsewhere.
+
+---
+
 *Last updated: 2026-07-13. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
