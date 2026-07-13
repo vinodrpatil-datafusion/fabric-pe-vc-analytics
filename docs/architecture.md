@@ -57,18 +57,24 @@ Three primary workspaces, organised under an **Investment Analytics** Fabric dom
 
 ### 2.3 Serving workspaces
 
-Three serving paths consume the conformed layer for different access patterns.
+Two serving paths consume the conformed/Gold layer for different access patterns.
+Fabric Warehouse is a documented, deferred extension path — not built at portfolio
+scope (see DD-05) — because DirectLake plus the Lakehouse SQL endpoint already cover
+the query patterns this build needs, and no build session provisions or populates it.
 
-#### 2.3.1 Analytical serving — Warehouse
+#### 2.3.1 Analytical serving — Lakehouse SQL endpoint
 
-**Purpose:** SQL-shaped analytical queries, aggregations, BI ad-hoc.
+**Purpose:** Ad-hoc analyst SQL and ETL/pipeline inspection over the Gold star schema.
 
-**Why Warehouse, not Lakehouse SQL endpoint:** The SQL optimiser in Warehouse is more mature for analytical workloads (joins across large fact tables, window functions, complex aggregations). Lakehouse SQL endpoint works for simpler shapes; Warehouse is the right serving layer for the analytical workloads investment analysts run.
+**Why the Lakehouse SQL endpoint, not Warehouse:** At portfolio query volume and
+complexity, the SQL endpoint's read-only Delta access is sufficient. Warehouse's more
+mature optimiser (joins across large fact tables, window functions, complex
+aggregations) would earn its keep at sustained analytical load this build doesn't
+generate — see DD-05 for the "when you'd add it back" case.
 
 **Contents:**
-- Star-schema views over conformed Delta tables (via OneLake shortcut)
-- Aggregation tables materialised for high-frequency queries
-- T-SQL stored procedures for parameterised analytical patterns
+- Read access to Gold Delta tables directly (no shortcut hop; same Lakehouse)
+- Ad-hoc query surface for pipeline/DQ inspection during development
 
 #### 2.3.2 BI semantic serving — DirectLake
 
@@ -154,7 +160,9 @@ Microsoft Purview sensitivity labels propagate through OneLake. Labels are appli
 
 ### 4.3 Lineage
 
-End-to-end lineage from external source through to BI visual or AI response is captured via Purview integration with Fabric. Lineage includes:
+End-to-end lineage from external source through to BI visual or AI response is designed
+around Purview integration with Fabric (designed, not yet wired up in the trial tenant
+— see `docs/governance.md` §3). Lineage includes:
 - Data lineage — source → landing → conformed → serving
 - Inference lineage — for AI responses, the retrieval context, model version, and prompt version
 
@@ -179,7 +187,7 @@ Fabric items (notebooks, pipelines, semantic models, lakehouse definitions) are 
 
 ### 5.2 Capacity management
 
-Fabric capacity is allocated to workspaces with elasticity to handle ingestion bursts (e.g., quarterly bulk refreshes from external sources) without provisioning for peak permanently. The Warehouse serving workspace has independent capacity from the AI workspace because their cost models differ.
+Fabric capacity is allocated to workspaces with elasticity to handle ingestion bursts (e.g., quarterly bulk refreshes from external sources) without provisioning for peak permanently. The BI serving workspace has independent capacity from the AI workspace because their cost models differ.
 
 ### 5.3 Multi-tenancy (designed but not implemented)
 
@@ -188,7 +196,7 @@ For a production multi-tenant deployment — e.g., a platform serving multiple i
 - Domain-per-tenant for governance isolation
 - Workspace-per-tenant within each domain for compute and storage isolation
 - Per-tenant encryption keys at the OneLake level
-- Mandatory tenant predicates at the serving layer (row-level security in Warehouse, role-based filtering in semantic models)
+- Mandatory tenant predicates at the serving layer (row-level security if Warehouse is added, role-based filtering in semantic models)
 - Tenant-scoped AI context — no cross-tenant retrieval, separate prompt-time scoping
 
 This is documented as design but not implemented in the portfolio build (which is single-tenant by design).
@@ -202,6 +210,7 @@ Listing the trade-offs explicitly:
 - **No real-time streaming.** External investment data sources are batch by nature (daily refreshes typical). Fabric Real-Time Intelligence is not engaged. Adding it would be straightforward for material event detection (M&A news, leadership change) but is not justified for the core analytics workflow.
 - **No fine-tuning.** The AI layer uses Azure OpenAI with prompting and structured outputs, not fine-tuned models. Fine-tuning would be the natural next step for domain vernacular precision; it's deferred to keep the portfolio scope tractable.
 - **No formal knowledge graph database.** Relational density is modelled in the conformed Delta layer with relationship tables and Spark graph operations. A dedicated graph database (Neo4j, Cosmos Gremlin) would be the production choice for sustained multi-hop traversal performance; the Delta-based approach is sufficient for portfolio scale.
+- **No Fabric Warehouse.** Analytical serving is DirectLake plus the Lakehouse SQL endpoint (see DD-05). Warehouse's mature T-SQL optimiser would be the right addition at sustained analytical load or for a dedicated analyst team running continuous ad-hoc SQL; neither applies at portfolio scale, and no build session provisions it.
 - **No physical multi-tenancy.** Single-tenant by design. Multi-tenancy is documented as extension path, not built.
 
 ---
@@ -215,8 +224,8 @@ The architecture supports the four core PE/VC workflows:
 - **Due diligence** — first-pass memo generation via AI layer over validated company data; analyst review and override loop.
 - **Portfolio monitoring** — recurring analytics on portfolio company performance, sector-level rollups, scenario analysis.
 
-Each workflow consumes the same conformed data layer through different serving paths (BI for portfolio monitoring, AI for memo generation, SQL/Warehouse for ad-hoc analytical queries).
+Each workflow consumes the same conformed data layer through different serving paths (BI for portfolio monitoring, AI for memo generation, Lakehouse SQL endpoint for ad-hoc analytical queries).
 
 ---
 
-*Last updated: May 2026. This is a living architectural document for an active portfolio project.*
+*Last updated: 2026-07-11. This is a living architectural document for an active portfolio project.*

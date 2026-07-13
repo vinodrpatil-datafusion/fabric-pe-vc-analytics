@@ -61,18 +61,22 @@ deal data                ─┤   └──────────┬───�
                           │  • Bitemporal modelling     │
                           └──────────────┬──────────────┘
                                          │
-                  ┌──────────────────────┼──────────────────────┐
-                  ▼                      ▼                      ▼
-        ┌─────────────────┐   ┌─────────────────────┐   ┌──────────────┐
-        │ Serving — SQL   │   │ Serving — Semantic  │   │ Serving — AI │
-        │ Warehouse       │   │ DirectLake → BI     │   │ AI Layer     │
-        │ Analytical/     │   │ Power BI semantic   │   │ Azure OpenAI │
-        │ aggregations    │   │ model               │   │ grounded     │
-        └─────────────────┘   └─────────────────────┘   └──────────────┘
+                                         ├──────────────────────┐
+                                         ▼                      ▼
+                          ┌─────────────────────┐   ┌──────────────┐
+                          │ Serving — Semantic  │   │ Serving — AI │
+                          │ DirectLake → BI     │   │ AI Layer     │
+                          │ Power BI semantic   │   │ Azure OpenAI │
+                          │ model               │   │ grounded     │
+                          └─────────────────────┘   └──────────────┘
 
 Governance plane: Purview-integrated lineage, sensitivity labels, workspace RBAC,
                   domain-organised (Investment Analytics domain)
 ```
+
+Fabric Warehouse is a documented, deferred extension for analytical SQL serving — see
+DD-05 in [`docs/design_decisions.md`](docs/design_decisions.md) — not provisioned at
+portfolio scope. Ad-hoc SQL access is via the Lakehouse SQL endpoint.
 
 See [`docs/architecture.md`](docs/architecture.md) for the full architecture with component-level rationale.
 
@@ -84,7 +88,7 @@ The full rationale is in [`docs/design_decisions.md`](docs/design_decisions.md).
 |---|---|---|
 | Ingestion to landing | Shortcuts, not copies | Lineage clarity, no duplication, faster freshness |
 | Conformed layer storage | Delta on Lakehouse | Schema evolution, time travel, AI workload friendliness |
-| Analytical serving | Warehouse (T-SQL) | SQL optimiser, mature BI tooling, aggregation workloads |
+| Analytical serving | DirectLake + Lakehouse SQL endpoint (Warehouse deferred) | Portfolio-scale query patterns don't need Warehouse's optimiser; no build session provisions it |
 | BI semantic layer | DirectLake → Power BI | No import refresh, sub-second on Delta, version-of-truth |
 | Graph-aware modelling | Conformed layer with relationship tables, graph view via Spark | Investor/portfolio/co-investment queries are multi-hop |
 | Temporal integrity | Bitemporal columns in Delta (effective_date, ingestion_date) | Investment data is point-in-time; "as-of" queries are first-class |
@@ -126,6 +130,8 @@ The accompanying agentic AI work — the AI Business Analyst Agent — lives in 
 ```
 fabric-pe-vc-analytics/
 ├── README.md                     ← you are here
+├── CLAUDE.md                     Guidance for AI-assisted work in this repo
+├── SYNTHETIC_DATA.md             Synthetic data contract and conflict model
 ├── docs/
 │   ├── architecture.md           Full architecture document
 │   ├── design_decisions.md       Decision log with rationale
@@ -134,18 +140,19 @@ fabric-pe-vc-analytics/
 ├── infrastructure/
 │   ├── workspace_layout.md       Fabric workspace structure
 │   └── deployment_pipelines.md   CI/CD approach (in progress)
-├── pipelines/
-│   ├── ingestion/                Fabric Data Pipelines (placeholder)
-│   └── transformation/           Spark / Dataflow Gen2 logic (future, beyond notebooks/)
-├── notebooks/
-│   ├── README.md                        Stage map, reconciliation policy, run instructions
-│   ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
-│   ├── 02_reconciliation.ipynb          Stage B — multi-source conflict resolution
-│   ├── 03_bitemporal_load.ipynb         Stage C — effective/ingestion dates + SCD2
-│   └── 04_data_quality_assertions.ipynb Stage D — referential integrity certification
-└── semantic_model/
-    └── investment_analytics.bim  Power BI semantic model (DirectLake)
+├── data-generator/                Python package producing synthetic landing feeds
+├── sample-data/                   Committed generator output (seed=42, scale=small)
+└── notebooks/
+    ├── README.md                        Stage map, reconciliation policy, run instructions
+    ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
+    ├── 02_reconciliation.ipynb          Stage B — multi-source conflict resolution
+    ├── 03_bitemporal_load.ipynb         Stage C — effective/ingestion dates + SCD2
+    └── 04_data_quality_assertions.ipynb Stage D — referential integrity certification
 ```
+
+**Not yet created (planned, not part of the current tree):**
+- `semantic_model/investment_analytics.bim` — Power BI semantic model; created once the DirectLake semantic model work below starts.
+- `pipelines/ingestion/`, `pipelines/transformation/` — Fabric Data Pipeline / Spark definitions; created once Git integration exports pipeline items (see the CI/CD roadmap row below).
 
 ## Roadmap
 
@@ -154,10 +161,11 @@ fabric-pe-vc-analytics/
 | Architecture v1 | ✅ Complete | Documented in `docs/` |
 | Workspace layout & domain setup | ✅ Complete | Trial tenant |
 | Conformed Delta build with bitemporal modelling | ✅ Complete | 4-stage pipeline (`notebooks/`); reconciliation scored 1.000/1.000 against synthetic conflict oracle |
-| DirectLake semantic model | 🔨 In progress | |
-| Azure OpenAI integration layer | 📋 Planned | |
-| Deployment pipelines (CI/CD via Git) | 📋 Planned | |
-| Microsoft Purview lineage integration | 📋 Planned | |
+| Gold star schema (Lakehouse Delta) | ⬜ Not started | |
+| DirectLake semantic model | ⬜ Not started | No `semantic_model/` artefact yet |
+| Azure OpenAI integration layer | 📐 Designed | Fusion agent pattern committed in `docs/design_decisions.md` DD-13; not yet built |
+| Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Dev-only at portfolio scope |
+| Microsoft Purview lineage integration | 📐 Designed, not implemented | Governance model assumes Purview (see `docs/governance.md`); not wired up in the trial tenant |
 
 ## Related work
 
@@ -173,4 +181,4 @@ This is part of an active practice in Enterprise AI & Data Architecture for fina
 
 ---
 
-*Last updated: June 2026. This project is under active development; design documents may evolve.*
+*Last updated: 2026-07-11. This project is under active development; design documents may evolve.*

@@ -72,10 +72,12 @@ External sources (DealRoom, Capital IQ)
           Stage A: schema validation (quarantine failures)
           Stage B: multi-source reconciliation (surface conflicts)
           Stage C: bitemporal load (effective_date + ingestion_date)
-      → ws-serving-warehouse-dev  (T-SQL views + aggregations)
-      → ws-serving-bi-dev         (DirectLake semantic model)
+      → ws-serving-bi-dev         (Gold Lakehouse + DirectLake semantic model)
       → ws-serving-ai-dev         (Azure OpenAI retrieval layer)
 ```
+
+Fabric Warehouse is a documented, deferred extension (DD-05) — not provisioned at
+portfolio scope. Analytical SQL access is via the Lakehouse SQL endpoint over Gold.
 
 AI integration reads from the conformed layer only — never from raw landing feeds.
 

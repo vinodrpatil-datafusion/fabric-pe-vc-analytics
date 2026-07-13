@@ -15,7 +15,13 @@ This document specifies the Fabric workspace structure for the platform implemen
 
 ## Workspaces
 
-Three primary workspaces, plus a deployment-pipeline-scoped variant of each for Dev / Test / Prod (Test and Prod placeholders only at portfolio scope).
+Three primary workspaces (ingestion, conformed, serving), plus a
+deployment-pipeline-scoped variant of each for Dev / Test / Prod (Test and Prod
+placeholders only at portfolio scope). Serving splits into BI and AI workspaces below.
+Fabric Warehouse is a documented, deferred extension (see
+[`../docs/design_decisions.md`](../docs/design_decisions.md) DD-05) — no
+`ws-serving-warehouse-*` workspace is provisioned. Analytical SQL access at portfolio
+scope is via the Lakehouse SQL endpoint directly over the conformed/Gold Delta tables.
 
 ### `ws-ingestion-dev`
 
@@ -61,24 +67,6 @@ Three primary workspaces, plus a deployment-pipeline-scoped variant of each for 
 - Admin: project owner
 - Members: none at portfolio scope; in production would be data engineering team
 - Viewers: serving workspace identities (read-only via shortcut)
-
----
-
-### `ws-serving-warehouse-dev`
-
-**Capacity:** F2 (trial).
-**Purpose:** Analytical SQL serving for ad-hoc analysis and BI workloads where DirectLake does not apply.
-
-**Items:**
-- Warehouse: `investment_analytics_wh`
-  - Views over conformed Delta tables (via shortcut to `ws-conformed-dev`).
-  - Materialised aggregations for high-frequency queries.
-  - Stored procedures for parameterised analytical patterns.
-
-**RBAC:**
-- Admin: project owner
-- Members: analyst role (in production)
-- Viewers: BI consumers
 
 ---
 
@@ -133,9 +121,11 @@ At portfolio scope, all workspaces share trial capacity. In a production deploym
 |---|---|---|
 | Ingestion | Small, burstable | Mostly idle; bursts on ingestion schedule. |
 | Conformed | Medium, scheduled high | Daily build window needs throughput; idle outside. |
-| Warehouse serving | Medium, sustained | Analyst query patterns are unpredictable but moderate. |
 | BI serving | Small | DirectLake offloads compute to the source Lakehouse. |
 | AI serving | Medium, sustained | LLM call orchestration and retrieval are concurrent. |
+
+If Warehouse serving is reopened (see DD-05), it would size Medium/sustained — analyst
+query patterns are unpredictable but moderate.
 
 ---
 
@@ -148,7 +138,6 @@ fabric-pe-vc-analytics/
 ├── workspaces/
 │   ├── ws-ingestion/
 │   ├── ws-conformed/
-│   ├── ws-serving-warehouse/
 │   ├── ws-serving-bi/
 │   └── ws-serving-ai/
 ```
@@ -157,4 +146,4 @@ Promotion across Dev → Test → Prod is via Fabric deployment pipelines. See [
 
 ---
 
-*Last updated: May 2026. Layout reflects portfolio implementation; production sizing notes are guidance.*
+*Last updated: 2026-07-11. Layout reflects portfolio implementation; production sizing notes are guidance.*

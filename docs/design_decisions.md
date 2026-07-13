@@ -60,10 +60,10 @@ Three properties matter for the conformed layer:
 2. **Time travel** — reproducibility of historical analyses depends on being able to query the data state at a point in time. Delta's time travel supports this without separate snapshot infrastructure.
 3. **AI workload friendliness** — Spark and Python read Delta natively for AI preprocessing; Warehouse T-SQL is more constrained for that pattern.
 
-Warehouse remains the right choice for analytical serving (see DD-05), but the conformed layer where data quality and bitemporal modelling are enforced wants Delta's flexibility.
+Analytical serving is DirectLake plus the Lakehouse SQL endpoint at portfolio scope (see DD-05), but the conformed layer where data quality and bitemporal modelling are enforced wants Delta's flexibility regardless of which SQL surface eventually serves it.
 
 **Trade-offs accepted:**
-- Delta on Lakehouse is read via SQL endpoint or Spark; the SQL endpoint has fewer optimiser features than Warehouse. Mitigated by serving analytical workloads through Warehouse via shortcut from the conformed Lakehouse.
+- Delta on Lakehouse is read via SQL endpoint or Spark; the SQL endpoint has fewer optimiser features than Warehouse would. Acceptable at portfolio query volume and complexity (see DD-05); Warehouse via shortcut from the conformed Lakehouse remains the documented path if that changes.
 
 ---
 
@@ -82,25 +82,54 @@ Bitemporal columns on the relevant tables give the right resolution at acceptabl
 
 **Trade-offs accepted:**
 - Storage overhead from SCD Type 2 patterns on bitemporal updates. Acceptable; investment data volumes are modest.
-- Query complexity — bitemporal queries are non-trivial. Mitigated by encapsulating the common "as-of-date" patterns in Warehouse views and DAX measures, so analysts don't write the bitemporal logic each time.
+- Query complexity — bitemporal queries are non-trivial. Mitigated by encapsulating the common "as-of-date" patterns in DAX measures and Lakehouse SQL endpoint views, so analysts don't write the bitemporal logic each time.
 
 ---
 
-## DD-05. Warehouse for analytical serving, Lakehouse SQL endpoint not used for analyst queries
+## DD-05. Analytical serving is DirectLake + Lakehouse SQL endpoint; Warehouse deferred
 
-**Choice:** Analytical SQL workloads (analyst ad-hoc, complex aggregations, BI back-end where DirectLake doesn't apply) served from Fabric Warehouse, not from the Lakehouse SQL endpoint.
+**Status:** Revised 2026-07-11. Originally this decision put Fabric Warehouse in the
+serving path for analytical SQL workloads. That conflicted with the locked build
+constraint that Gold is Lakehouse-only (Delta + PySpark, DirectLake — no Warehouse Gold)
+and, in practice, no session in the build plan ever provisioned or populated a Warehouse.
+Documenting an active serving path that nothing builds is worse than not having one;
+this entry now records the as-built decision and preserves the original rationale below
+as the "when you'd add it back" case.
+
+**Choice:** At portfolio scope, analytical serving is DirectLake (Power BI semantic
+model) plus the Lakehouse SQL endpoint for ad-hoc query and ETL inspection. Fabric
+Warehouse is **not provisioned**; `ws-serving-warehouse-dev` does not exist as a built
+workspace.
 
 **Alternatives considered:**
-- Lakehouse SQL endpoint as the only SQL surface
+- Fabric Warehouse as a dedicated analytical SQL serving layer (the original DD-05 choice)
+- Lakehouse SQL endpoint as the only SQL surface (the choice actually made)
 - Hybrid — some workloads to each
 
 **Rationale:**
-Warehouse has the more mature SQL optimiser for analytical workloads — complex joins, window functions, multi-fact aggregations. Lakehouse SQL endpoint works for read-only Delta queries with simpler shapes, but the analyst query patterns here lean analytical-heavy.
+The Gold star schema (WS3) is built once, as Delta tables in a Gold Lakehouse, and
+DirectLake reads it directly for BI — no import cycle, no second copy. The remaining
+need — ad-hoc analyst SQL, ETL inspection — is served adequately by the Lakehouse SQL
+endpoint at this data volume and query complexity. Standing up a Warehouse for a query
+pattern DirectLake and the SQL endpoint already cover would be a second copy of Gold
+with no session in the plan to build or maintain it.
 
-The conformed Lakehouse remains the storage substrate; Warehouse reads from it via OneLake shortcut. Single copy of data, two SQL surfaces with different optimisation characteristics.
+**When Warehouse would be the right addition (not built here):**
+Warehouse's SQL optimiser earns its keep at sustained analytical load the Lakehouse SQL
+endpoint doesn't handle well — heavy multi-fact joins and window functions at scale,
+a dedicated analyst team running ad-hoc queries continuously (not just BI-mediated
+access), or a need for stored procedures / materialised aggregation tables as a
+governed query surface distinct from Gold. None of those apply at portfolio scope. If
+they did, the original pattern still holds: Warehouse reads Gold via OneLake shortcut,
+single copy of data, two SQL surfaces with different optimisation characteristics.
 
 **Trade-offs accepted:**
-- Two SQL engines for the team to understand. Mitigated by the convention: Warehouse for analytics, Lakehouse SQL endpoint reserved for ETL inspection and lightweight notebooks.
+- No dedicated analytical-SQL surface with a mature optimiser for complex multi-fact
+  aggregations; acceptable because portfolio-scale queries don't stress the Lakehouse
+  SQL endpoint.
+- If a future session reopens Warehouse, `architecture.md` §2.3.1, `CLAUDE.md`'s flow
+  diagram, `infrastructure/workspace_layout.md`, and this entry all need to move
+  together — that was the drift this revision fixes.
 
 ---
 
@@ -198,6 +227,9 @@ Workspaces in Fabric are the unit of RBAC, capacity allocation, and Git source c
 
 ## DD-11. Microsoft Purview for lineage, not custom
 
+**Status:** Designed, not implemented in the trial tenant — consistent with the README
+roadmap ("Microsoft Purview lineage integration").
+
 **Choice:** End-to-end data lineage via Microsoft Purview integration with Fabric.
 
 **Alternatives considered:**
@@ -228,4 +260,61 @@ Git integration in Fabric reached production maturity in 2024-2025 and is the ri
 
 ---
 
-*Last updated: May 2026. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
+## DD-13. Foundry-composed fusion agent for AI integration (WS5 Option B)
+
+**Status:** Added 2026-07-11. This commits an AI integration pattern that had been
+discussed but not formally recorded, reopening the "multiple AI patterns" question with
+a concrete choice rather than leaving it a deferred line item.
+
+**Choice:** AI integration is a **fusion agent** that routes each question to one or
+both of two independent retrieval legs, then composes the result:
+- **Structured leg** — a Fabric Data Agent over the Gold star schema, answering
+  NL2SQL-shaped questions (metrics, filters, aggregations) directly against Delta
+  tables.
+- **Unstructured leg** — Foundry IQ indexing a synthetic LP document corpus (quarterly
+  letters, capital call notices, memos), answering document-grounded questions with
+  citations.
+- **Routing** — structured questions go to the Data Agent, document questions go to
+  Foundry IQ, hybrid questions go to both with the fusion agent synthesising a single
+  cited answer.
+
+**Alternatives considered:**
+- **Data Agent only** — structured NL2SQL with no document retrieval. Simpler, but
+  can't answer anything grounded in LP letters, memos, or capital call notices — a
+  material gap for the due-diligence and portfolio-monitoring workflows in
+  `architecture.md` §7.
+- **Foundry IQ only** — document retrieval with no structured query path. Can't answer
+  precise metric questions ("MOIC by vintage") without either hallucinating numbers or
+  falling back to citing a document that happens to contain them — worse grounding for
+  exactly the questions structured retrieval answers cleanly.
+- **Single monolithic agent with tool access to both** — one agent given both a SQL
+  tool and a retrieval tool, deciding per-turn what to call. Simpler to stand up, but
+  routing logic and failure modes are opaque inside one prompt; harder to evaluate each
+  leg's accuracy independently — the eventual evaluation needs per-leg scores, not just
+  a blended end-to-end number.
+
+**Rationale:**
+Structured and unstructured investment questions have different failure modes and need
+different grounding strategies. Keeping the two legs independently retrievable and
+independently evaluable (groundedness + citation-accuracy scored per leg, not just
+blended) is what makes the eventual evaluation numbers mean something. The fusion agent
+is the minimum routing layer that gets a hybrid answer without collapsing that
+separation. This still honours DD-08 — both legs read only from the conformed/Gold
+layer: the Data Agent queries Gold directly, and the LP document corpus is generated
+with every document required to reference existing Gold dimension keys (fund/company/
+round IDs), so Foundry IQ's index is itself traceable back to conformed data rather than
+an independent, unvalidated source.
+
+**Trade-offs accepted:**
+- Two retrieval systems to build, index, and maintain instead of one — accepted because
+  the alternative (pick one) leaves a workflow category unanswerable or poorly grounded.
+- Routing errors are a new failure mode (a structured question misrouted to document
+  retrieval, or vice versa) — the evaluation harness needs to be scoped to catch this,
+  and failure modes should be reported honestly, not hidden.
+- This entry documents the target pattern; the document corpus generator, both
+  retrieval legs, the routing agent, and the evaluation harness are not yet built.
+  Status here is architecture-committed, not build-complete.
+
+---
+
+*Last updated: 2026-07-11. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
