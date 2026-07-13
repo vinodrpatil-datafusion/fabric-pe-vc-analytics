@@ -43,18 +43,18 @@ mechanism differs.
 ## Architecture at a glance
 
 ```
-External sources                    Fabric workspace structure
-─────────────────                   ──────────────────────────
+External sources                    Items within pevc-dev (single workspace)
+─────────────────                   ────────────────────────────────────────
 DealRoom (ndjson)        ─┐
 S&P / Capital IQ-style   ─┤
 news feeds               ─┤   ┌─────────────────────┐
-                          ├──▶│ Ingestion workspace │  (Shortcuts, no copy)
+                          ├──▶│ landing_lakehouse   │  (Shortcuts, no copy)
 Internal historical      ─┤   │  OneLake landing    │
 deal data                ─┤   └──────────┬──────────┘
                           ┘              │
                                          ▼
                           ┌─────────────────────────────┐
-                          │ Conformed workspace         │
+                          │ conformed_lakehouse         │
                           │  Delta Lake (Lakehouse)     │
                           │  • Deterministic validation │
                           │  • Source reconciliation    │
@@ -70,13 +70,18 @@ deal data                ─┤   └──────────┬───�
                           │ model               │   │ grounded     │
                           └─────────────────────┘   └──────────────┘
 
-Governance plane: Purview-integrated lineage, sensitivity labels, workspace RBAC,
-                  domain-organised (Investment Analytics domain)
+Governance plane: Purview-integrated lineage (designed, not wired up), sensitivity
+                  labels, item-level access within the domain-organised workspace
 ```
 
-Fabric Warehouse is a documented, deferred extension for analytical SQL serving — see
-DD-05 in [`docs/design_decisions.md`](docs/design_decisions.md) — not provisioned at
-portfolio scope. Ad-hoc SQL access is via the Lakehouse SQL endpoint.
+Everything above runs in a **single Fabric workspace** (`pevc-dev`) at portfolio scope
+— see DD-14 in [`docs/design_decisions.md`](docs/design_decisions.md). The boxes are
+lakehouses/items within that one workspace, not separate workspaces; workspace-per-layer
+with distinct RBAC (DD-10) is documented as the production-scale target, not built here.
+
+Fabric Warehouse is a further documented, deferred extension for analytical SQL serving
+— see DD-05 — not provisioned at portfolio scope. Ad-hoc SQL access is via the
+Lakehouse SQL endpoint.
 
 See [`docs/architecture.md`](docs/architecture.md) for the full architecture with component-level rationale.
 
@@ -93,7 +98,7 @@ The full rationale is in [`docs/design_decisions.md`](docs/design_decisions.md).
 | Graph-aware modelling | Conformed layer with relationship tables, graph view via Spark | Investor/portfolio/co-investment queries are multi-hop |
 | Temporal integrity | Bitemporal columns in Delta (effective_date, ingestion_date) | Investment data is point-in-time; "as-of" queries are first-class |
 | AI integration | Azure OpenAI against pre-validated conformed data only | LLM never reasons over raw input; data quality enforced upstream |
-| Governance | Workspace RBAC + Purview lineage + sensitivity labels | Audit substrate, not retrofit |
+| Governance | Item-level access + Purview lineage (designed) + sensitivity labels | Audit substrate, not retrofit; workspace-per-layer RBAC is the documented production target (DD-10), single-workspace item separation at trial scope (DD-14) |
 
 ## Domain modelling
 
@@ -159,7 +164,7 @@ fabric-pe-vc-analytics/
 | Stage | Status | Notes |
 |---|---|---|
 | Architecture v1 | ✅ Complete | Documented in `docs/` |
-| Workspace layout & domain setup | ✅ Complete | Trial tenant |
+| Workspace/domain setup | ✅ Complete (as-built ≠ target) | Single workspace `pevc-dev` under the `Investment Analytics` domain (DD-14); the documented workspace-per-layer target (DD-10) isn't provisioned |
 | Conformed Delta build with bitemporal modelling | ✅ Complete | 4-stage pipeline (`notebooks/`); reconciliation scored 1.000/1.000 against synthetic conflict oracle |
 | Gold star schema (Lakehouse Delta) | ⬜ Not started | |
 | DirectLake semantic model | ⬜ Not started | No `semantic_model/` artefact yet |
@@ -181,4 +186,4 @@ This is part of an active practice in Enterprise AI & Data Architecture for fina
 
 ---
 
-*Last updated: 2026-07-11. This project is under active development; design documents may evolve.*
+*Last updated: 2026-07-13. This project is under active development; design documents may evolve.*

@@ -63,17 +63,22 @@ The `expected_conflicts` ledger in `sample-data/reference/` records every confli
 
 **Nested columns** (arrays, structs) are stored as JSON strings in landing files — parsed at conformed layer, not at landing.
 
-## Three-workspace data flow
+## Data flow (single workspace, `pevc-dev`)
+
+The target architecture documents four separate workspaces, workspace-per-layer
+(`docs/architecture.md` §2, DD-10). The live trial tenant runs everything in **one
+workspace, `pevc-dev`** instead (DD-14) — separation is by lakehouse/item, not by
+workspace. Data flow:
 
 ```
 External sources (DealRoom, Capital IQ)
-  → OneLake shortcuts → ws-ingestion-dev/landing_lakehouse
-      → ws-conformed-dev/conformed_lakehouse  (Delta tables)
+  → OneLake shortcuts → pevc-dev/landing_lakehouse
+      → pevc-dev/conformed_lakehouse  (Delta tables)
           Stage A: schema validation (quarantine failures)
           Stage B: multi-source reconciliation (surface conflicts)
           Stage C: bitemporal load (effective_date + ingestion_date)
-      → ws-serving-bi-dev         (Gold Lakehouse + DirectLake semantic model)
-      → ws-serving-ai-dev         (Azure OpenAI retrieval layer)
+      → pevc-dev/(Gold Lakehouse, once built) + DirectLake semantic model
+      → pevc-dev/(AI retrieval layer, once built)
 ```
 
 Fabric Warehouse is a documented, deferred extension (DD-05) — not provisioned at

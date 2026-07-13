@@ -19,16 +19,24 @@ Five layers, each enforced independently. Defence in depth — a failure at one 
 - Domain admin manages cross-workspace settings without granting access to individual workspace contents.
 - In an institutional context, domain-level governance separates the investment data estate from other data estates (HR, finance, operations).
 
-### Layer 3: Workspace-level
+### Layer 3: Workspace-level (target design)
 
-- Each workspace has admin, member, and viewer roles.
-- Cross-workspace access is explicit — shortcut-based read, never implicit promotion.
-- Workspace boundaries align with data quality boundaries (ingestion, conformed, serving).
+In the production-target layout (DD-10), each workspace has admin, member, and viewer
+roles; cross-workspace access is explicit (shortcut-based read, never implicit
+promotion); workspace boundaries align with data quality boundaries (ingestion,
+conformed, serving). **At trial scope (DD-14), this layer collapses to one workspace**
+(`pevc-dev`) with a single admin — the workspace-level boundary isn't doing governance
+work here, since there's nothing to separate a second workspace from. Layer 4 carries
+the boundary instead.
 
 ### Layer 4: Item-level
 
 - Lakehouses, Warehouses, semantic models, notebooks have item-level RBAC.
 - Granular access for sensitive items (internal deal pipeline data) is enforced at this level.
+- **At trial scope, this is the layer actually enforcing the data-quality boundary**
+  (landing vs. conformed vs. serving) that Layer 3 would carry in the target design —
+  each lakehouse/notebook is a distinct item within `pevc-dev`, even though they share
+  a workspace.
 
 ### Layer 5: Data-level
 
@@ -75,7 +83,9 @@ Queryable via Purview UI and API. Compliance and engineering both have access.
 
 ### Inference lineage
 
-Tracked through a custom inference audit table (`ws-serving-ai-dev/inference_audit`):
+Tracked through a custom inference audit table — target design names it
+`ws-serving-ai-dev/inference_audit`; as-built (DD-14) it would be `pevc-dev/
+inference_audit` once the AI serving layer (DD-13, not yet built) exists:
 
 | Captured | Purpose |
 |---|---|
@@ -104,7 +114,7 @@ Retention: 90 days hot; longer-term retention via export to dedicated storage.
 
 ### 4.2 Inference audit
 
-Custom audit table as described in Section 3 (inference lineage). Append-only Delta table in `ws-serving-ai-dev`.
+Custom audit table as described in Section 3 (inference lineage). Append-only Delta table — `pevc-dev` as-built once built (DD-14); `ws-serving-ai-dev` in the target design.
 
 Retention: indefinite for high-stakes outputs (IC memo support); sampled or aggregated for lower-stakes.
 
@@ -142,4 +152,4 @@ For a production deployment, the following extend the governance design but are 
 
 ---
 
-*Last updated: 2026-07-11.*
+*Last updated: 2026-07-13.*

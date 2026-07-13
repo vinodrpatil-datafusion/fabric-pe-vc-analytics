@@ -210,6 +210,10 @@ Structured outputs eliminate a class of hallucination by making it impossible fo
 
 ## DD-10. Workspace separation as governance boundary
 
+**Status:** Revised 2026-07-13. This entry records the production-target governance
+pattern. The as-built trial tenant uses a single workspace instead — see DD-14 for the
+portfolio-scope decision and the reconciliation this revision makes with reality.
+
 **Choice:** Ingestion, conformed, and serving in separate Fabric workspaces with explicit RBAC and shortcut-based read access.
 
 **Alternatives considered:**
@@ -222,6 +226,10 @@ Workspaces in Fabric are the unit of RBAC, capacity allocation, and Git source c
 **Trade-offs accepted:**
 - More workspaces to manage. Acceptable; the operational overhead is small relative to the governance value.
 - Cross-workspace dependencies need to be designed (shortcut paths, deployment pipeline ordering). This is by design — making the dependencies explicit is the point.
+- **Not applied at portfolio scope** (DD-14): a single trial-tenant admin managing one F2
+  capacity gets none of the multi-developer RBAC benefit this decision is optimised for.
+  The pattern remains the right answer for a team-operated production deployment; it's
+  documented here, not built, at this scope.
 
 ---
 
@@ -317,4 +325,53 @@ an independent, unvalidated source.
 
 ---
 
-*Last updated: 2026-07-11. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
+## DD-14. Single Fabric workspace at trial scope; workspace separation deferred
+
+**Status:** Added 2026-07-13, reconciling documentation with the as-built trial tenant.
+
+**Choice:** The entire build runs in one Fabric workspace (`pevc-dev`) — landing and
+conformed lakehouses, all four conformed-layer notebooks, and (once built) the Gold
+lakehouse, BI semantic model, and AI serving artefacts all live there together, instead
+of the four-workspace split (`ws-ingestion-dev`, `ws-conformed-dev`, `ws-serving-bi-dev`,
+`ws-serving-ai-dev`) that DD-10 and earlier `architecture.md`/`infrastructure/
+workspace_layout.md` revisions described and named.
+
+**Alternatives considered:**
+- Workspace-per-layer, as DD-10 originally specified (RBAC and capacity isolation per
+  ingestion/conformed/serving boundary).
+- Two workspaces (raw + everything else) — DD-10's other rejected alternative, still
+  more than this build uses.
+
+**Rationale:**
+DD-10's governance-boundary argument assumes multiple developers or teams whose access
+needs to be scoped independently, and enough capacity budget to justify per-layer
+allocation. Neither holds at trial scope: this is a single-maintainer build on one F2
+trial capacity. A four-workspace split under those conditions adds Fabric admin
+overhead (workspace creation, Git-connecting each one, cross-workspace shortcut wiring)
+without a governance boundary it's actually enforcing — there's only one identity doing
+all the work. Separation within `pevc-dev` is by **item** (lakehouse, notebook, future
+semantic model) rather than by workspace; the data-quality boundary DD-10 cares about
+(raw vs. conformed vs. serving) still exists, just as separate lakehouses inside one
+workspace rather than separate workspaces.
+
+**When workspace-per-layer is the right choice (not built here):** a team-operated
+deployment where different people should have different access (data engineering
+writes to conformed but not serving; BI developers publish reports but shouldn't see
+landing), or a production capacity budget where ingestion, conformed-build, and serving
+genuinely have different sizing/elasticity needs (see the capacity table this decision
+leaves undisturbed in `infrastructure/workspace_layout.md`). DD-10's rationale is
+unchanged for that context — it just isn't the context this portfolio build is in.
+
+**Trade-offs accepted:**
+- No workspace-level RBAC boundary between ingestion and conformed data at portfolio
+  scope — acceptable because there's one identity operating the whole tenant. Item-level
+  permissions within `pevc-dev` are the available substitute, not currently configured
+  beyond the single owner (see `docs/governance.md` Layer 3/4).
+- The documented four-workspace names (`ws-ingestion-dev` etc.) no longer describe the
+  live tenant. Every doc that named them (`architecture.md`, `CLAUDE.md`,
+  `infrastructure/workspace_layout.md`, `README.md`) is updated alongside this entry to
+  say `pevc-dev` instead, so this doesn't become the next drift.
+
+---
+
+*Last updated: 2026-07-13. New decisions are appended; existing decisions are updated in place with revision notes when changed.*

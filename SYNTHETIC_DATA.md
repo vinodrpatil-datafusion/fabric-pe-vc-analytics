@@ -10,7 +10,8 @@ This is **v2**. v1 generated a fund/LP/cashflow accounting model that did not ma
 
 ## Source model
 
-Three feeds, mapping to `workspace_layout.md` → `ws-ingestion-dev/landing_lakehouse`:
+Three feeds, mapping to `workspace_layout.md` → `pevc-dev/landing_lakehouse` (as-built,
+single workspace; `ws-ingestion-dev` is the documented production-target name):
 
 | Feed | Represents | Entities |
 |---|---|---|

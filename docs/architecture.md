@@ -18,15 +18,26 @@ The architecture is shaped by five principles, applied in order of precedence wh
 
 **1.4 Relational density modelled explicitly.** PE/VC is a graph problem at heart. Investor → fund → portfolio company → co-investor → board member relationships are first-class, not derived through application-layer joins.
 
-**1.5 Workspace boundaries reflect governance boundaries.** Ingestion, conformed, and serving live in separate Fabric workspaces with distinct RBAC. Cross-workspace access is through shortcuts (read-only) and explicit promotion paths.
+**1.5 Governance boundaries are explicit, not implicit.** Raw, conformed, and serving are kept separated — as distinct Fabric workspaces with distinct RBAC in a team/production deployment (DD-10), or as distinct lakehouses/items within a single workspace at the trial scope this build actually runs at (DD-14). Either way, cross-boundary access is through shortcuts (read-only) and explicit promotion paths, not ad-hoc reads across the data-quality boundary.
 
 ---
 
 ## 2. Workspace layout
 
-Three primary workspaces, organised under an **Investment Analytics** Fabric domain.
+> **As-built note (DD-14):** the live trial tenant runs everything in **one Fabric
+> workspace, `pevc-dev`** — landing and conformed lakehouses, all conformed-layer
+> notebooks, and (once built) Gold/BI/AI artefacts together. The sections below
+> describe the **target, production-scale layout** (DD-10) — workspace-per-layer with
+> distinct RBAC — which this build documents but does not provision. Where the target
+> design says "workspace," the as-built equivalent is "lakehouse/item within
+> `pevc-dev`," with data-quality boundaries enforced by item separation rather than
+> workspace RBAC. See [`../infrastructure/workspace_layout.md`](../infrastructure/workspace_layout.md)
+> for the as-built structure in full.
 
-### 2.1 Ingestion workspace
+Three primary workspaces, organised under an **Investment Analytics** Fabric domain, in
+the target production layout.
+
+### 2.1 Ingestion workspace (target; as-built: `landing_lakehouse` in `pevc-dev`)
 
 **Purpose:** Receive raw external and internal data with no transformation. Source-of-truth landing zone.
 
@@ -36,11 +47,11 @@ Three primary workspaces, organised under an **Investment Analytics** Fabric dom
 - Schema validation notebooks
 - Source attribution metadata tables
 
-**Access:** Data engineering team write; conformed workspace read via shortcut. No direct analyst or AI access.
+**Access:** Data engineering team write; conformed workspace read via shortcut. No direct analyst or AI access. (As-built: item-level permissions on `landing_lakehouse` within `pevc-dev`, single owner at trial scope.)
 
 **Why isolated:** Raw data may contain PII, contractual terms under NDA, or unvalidated vendor outputs. Quarantining it protects every downstream consumer.
 
-### 2.2 Conformed workspace
+### 2.2 Conformed workspace (target; as-built: `conformed_lakehouse` in `pevc-dev`)
 
 **Purpose:** The trust boundary. Data here is validated, reconciled, deduplicated, source-attributed, and bitemporally modelled.
 
@@ -51,11 +62,11 @@ Three primary workspaces, organised under an **Investment Analytics** Fabric dom
 - Data quality assertion notebooks
 - Domain entity tables (companies, funding rounds, investors, investments, people, deals, documents)
 
-**Access:** Data engineering write; serving workspaces read; AI layer reads from here only.
+**Access:** Data engineering write; serving workspaces read; AI layer reads from here only. (As-built: same single-owner item-level access within `pevc-dev` as 2.1.)
 
 **Why this is the trust boundary:** Everything that consumes data — analytical workloads, BI semantic models, AI integrations — reads from conformed. Quality enforced once, consumed by many.
 
-### 2.3 Serving workspaces
+### 2.3 Serving workspaces (target; as-built: same `pevc-dev` workspace)
 
 Two serving paths consume the conformed/Gold layer for different access patterns.
 Fabric Warehouse is a documented, deferred extension path — not built at portfolio
@@ -91,7 +102,7 @@ generate — see DD-05 for the "when you'd add it back" case.
 
 **Purpose:** Grounded AI workloads — retrieval, summarisation, structured insight generation.
 
-**Why a separate workspace:** AI workloads have different access patterns (low-latency point-lookups + vector retrieval), different governance requirements (prompt/response logging, model versioning), and different cost models (per-token, not per-CU).
+**Why a separate workspace (target design):** AI workloads have different access patterns (low-latency point-lookups + vector retrieval), different governance requirements (prompt/response logging, model versioning), and different cost models (per-token, not per-CU). At trial scope (DD-14) these artefacts live in `pevc-dev` alongside everything else; the cost/governance separation this argument describes doesn't bind for a single-tenant, single-owner build.
 
 **Contents:**
 - Retrieval functions against conformed Delta
@@ -130,7 +141,12 @@ Three stages, in order. Each is independently observable.
 
 ### 3.3 Conformed to serving
 
-Serving workspaces read conformed Delta tables via OneLake shortcuts. No data copy. Each serving workspace exposes its own access surface — Warehouse views, semantic model, AI retrieval functions — without duplicating the underlying Delta storage.
+In the target design, serving workspaces read conformed Delta tables via OneLake
+shortcuts, each exposing its own access surface without duplicating storage. At trial
+scope (DD-14), serving items read the same `conformed_lakehouse` directly within
+`pevc-dev` — no shortcut hop needed since there's no workspace boundary to cross — but
+each surface (semantic model, AI retrieval functions) still reads, not copies, the
+underlying Delta tables.
 
 ### 3.4 AI inference flow
 
@@ -148,11 +164,13 @@ For an AI-driven workload (e.g., "summarise the funding history of company X in 
 
 ## 4. Governance plane
 
-Governance is layered across every workspace, not concentrated in one.
+In the target design, governance is layered across every workspace, not concentrated
+in one. At trial scope (DD-14), it's layered across every **item** within the single
+`pevc-dev` workspace instead — the boundary moved from workspace to item, not away.
 
-### 4.1 Workspace RBAC
+### 4.1 Workspace RBAC (target); item-level RBAC (as-built)
 
-Three role tiers per workspace: Admin, Member, Viewer. Cross-workspace access is explicit (no implicit promotion). The conformed workspace gates everything downstream.
+Target: three role tiers per workspace — Admin, Member, Viewer — with cross-workspace access explicit (no implicit promotion) and the conformed workspace gating everything downstream. As-built: `pevc-dev` has a single owner (Admin), so the multi-role tiering isn't exercised yet; the conformed lakehouse item still conceptually gates everything downstream, enforced by the pipeline order (Stage A → D) rather than by RBAC on a separate workspace.
 
 ### 4.2 Sensitivity labels
 
@@ -187,7 +205,7 @@ Fabric items (notebooks, pipelines, semantic models, lakehouse definitions) are 
 
 ### 5.2 Capacity management
 
-Fabric capacity is allocated to workspaces with elasticity to handle ingestion bursts (e.g., quarterly bulk refreshes from external sources) without provisioning for peak permanently. The BI serving workspace has independent capacity from the AI workspace because their cost models differ.
+In the target design, Fabric capacity is allocated per workspace with elasticity to handle ingestion bursts (e.g., quarterly bulk refreshes from external sources) without provisioning for peak permanently — the BI serving workspace would carry independent capacity from the AI workspace since their cost models differ. At trial scope (DD-14), all items share the single F2 capacity backing `pevc-dev`; per-path capacity isolation is one of the things a production split (DD-10) would buy back.
 
 ### 5.3 Multi-tenancy (designed but not implemented)
 
@@ -228,4 +246,4 @@ Each workflow consumes the same conformed data layer through different serving p
 
 ---
 
-*Last updated: 2026-07-11. This is a living architectural document for an active portfolio project.*
+*Last updated: 2026-07-13. This is a living architectural document for an active portfolio project.*

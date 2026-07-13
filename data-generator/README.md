@@ -27,7 +27,8 @@ sample-data/
     └── ground_truth_*           reconciliation oracle (NOT a feed)
 ```
 
-Maps to `../infrastructure/workspace_layout.md` → `ws-ingestion-dev/landing_lakehouse`.
+Maps to `../infrastructure/workspace_layout.md` → `pevc-dev/landing_lakehouse` (as-built,
+single workspace; `ws-ingestion-dev` is the documented production-target name).
 
 ## Entities → data_model.md
 
