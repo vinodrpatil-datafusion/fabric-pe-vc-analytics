@@ -1,16 +1,16 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.10.0/schema.json",
-  "name": "dcfac498e1dde85b844d",
+  "name": "b6a9cbb6b1f3545202d5",
   "position": {
     "x": 746.97142857142853,
-    "y": 165.48571428571429,
-    "z": 3000,
-    "height": 257.82857142857142,
-    "width": 516.57142857142856,
-    "tabOrder": 3000
+    "y": 423.31428571428569,
+    "z": 4001,
+    "height": 273.37142857142857,
+    "width": 533.02857142857147,
+    "tabOrder": 4001
   },
   "visual": {
-    "visualType": "clusteredBarChart",
+    "visualType": "lineChart",
     "query": {
       "queryState": {
         "Category": {
@@ -20,19 +20,19 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "gold_dim_company"
+                      "Entity": "gold_dim_date"
                     }
                   },
-                  "Property": "sector_group"
+                  "Property": "year"
                 }
               },
-              "queryRef": "gold_dim_company.sector_group",
-              "nativeQueryRef": "sector_group",
+              "queryRef": "gold_dim_date.year",
+              "nativeQueryRef": "year",
               "active": true
             }
           ]
         },
-        "Y": {
+        "Y2": {
           "projections": [
             {
               "field": {
@@ -42,11 +42,11 @@
                       "Entity": "gold_fact_investment"
                     }
                   },
-                  "Property": "Sector Concentration %"
+                  "Property": "Cumulative NAV (proxy)"
                 }
               },
-              "queryRef": "gold_fact_investment.Sector Concentration %",
-              "nativeQueryRef": "Sector Concentration %"
+              "queryRef": "gold_fact_investment.Cumulative NAV (proxy)",
+              "nativeQueryRef": "Cumulative NAV (proxy)"
             }
           ]
         }
@@ -61,7 +61,7 @@
                     "Entity": "gold_fact_investment"
                   }
                 },
-                "Property": "Sector Concentration %"
+                "Property": "Cumulative NAV (proxy)"
               }
             },
             "direction": "Descending"
@@ -77,7 +77,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Portfolio Concentration by Sector'"
+                  "Value": "'Portfolio NAV Trajectory'"
                 }
               }
             }

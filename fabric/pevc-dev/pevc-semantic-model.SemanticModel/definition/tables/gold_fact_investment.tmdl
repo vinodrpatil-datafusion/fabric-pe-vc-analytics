@@ -78,6 +78,18 @@ table gold_fact_investment
 
 		changedProperty = FormatString
 
+	measure 'Cumulative NAV (proxy)' =
+			
+			CALCULATE(
+			    [NAV (proxy)],
+			    FILTER(ALL(gold_dim_date), gold_dim_date[date] <= MAX(gold_dim_date[date]))
+			)
+		lineageTag: ec6ff3f0-4d42-4845-8686-e0cc97c7a024
+
+		changedProperty = Name
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
 	column investment_sk
 		dataType: string
 		lineageTag: 4e9ead3b-376a-4335-9492-e1f43a5605ce
@@ -226,11 +238,14 @@ table gold_fact_investment
 
 	column board_seat_taken
 		dataType: boolean
+		isHidden
 		formatString: """TRUE"";""TRUE"";""FALSE"""
 		lineageTag: 69638454-4de8-478f-b64c-8f24ec1ec8fa
 		sourceLineageTag: board_seat_taken
 		summarizeBy: none
 		sourceColumn: board_seat_taken
+
+		changedProperty = IsHidden
 
 		annotation SummarizationSetBy = Automatic
 
