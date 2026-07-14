@@ -201,7 +201,7 @@ Three audit substrates:
 
 ### 5.1 CI/CD via Git
 
-Fabric items (notebooks, pipelines, semantic models, lakehouse definitions) are managed through Git integration. Deployment pipelines promote across Dev → Test → Prod workspace tiers. (This part is in progress in the implementation; design documented in [`infrastructure/deployment_pipelines.md`](../infrastructure/deployment_pipelines.md).)
+Fabric items (notebooks, lakehouses, semantic models, reports) are managed through Git integration — connected and in active use (`pevc-dev` ↔ this repo on GitHub, folder `fabric/pevc-dev/`). Deployment pipelines promoting across Dev → Test → Prod workspace tiers are not built — design documented in [`infrastructure/deployment_pipelines.md`](../infrastructure/deployment_pipelines.md), implementation still in progress.
 
 ### 5.2 Capacity management
 

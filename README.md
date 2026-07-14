@@ -2,7 +2,7 @@
 
 > A reference architecture and working portfolio project for institutional private equity and venture capital analytics, built on Microsoft Fabric.
 
-**Status:** Active development. Architecture v1 complete; implementation in progress.
+**Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration and deployment pipelines remain in progress.
 **Author:** Vinod Patil — Enterprise AI & Data Architect ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
@@ -147,16 +147,20 @@ fabric-pe-vc-analytics/
 │   └── deployment_pipelines.md   CI/CD approach (in progress)
 ├── data-generator/                Python package producing synthetic landing feeds
 ├── sample-data/                   Committed generator output (seed=42, scale=small)
-└── notebooks/
-    ├── README.md                        Stage map, reconciliation policy, run instructions
-    ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
-    ├── 02_reconciliation.ipynb          Stage B — multi-source conflict resolution
-    ├── 03_bitemporal_load.ipynb         Stage C — effective/ingestion dates + SCD2
-    └── 04_data_quality_assertions.ipynb Stage D — referential integrity certification
+├── notebooks/
+│   ├── README.md                        Stage map, reconciliation policy, run instructions
+│   ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
+│   ├── 02_reconciliation.ipynb          Stage B — multi-source conflict resolution
+│   ├── 03_bitemporal_load.ipynb         Stage C — effective/ingestion dates + SCD2
+│   ├── 04_data_quality_assertions.ipynb Stage D — referential integrity certification
+│   └── 05_gold_star_schema.ipynb        Stage E — Gold star schema (WS3)
+└── fabric/pevc-dev/               Fabric Git integration sync folder — Fabric's own
+                                    Commit operation writes here (notebooks, lakehouses,
+                                    the DirectLake semantic model, the Power BI report),
+                                    one subfolder per workspace item; not hand-edited
 ```
 
 **Not yet created (planned, not part of the current tree):**
-- `semantic_model/investment_analytics.bim` — Power BI semantic model; created once the DirectLake semantic model work below starts.
 - `pipelines/ingestion/`, `pipelines/transformation/` — Fabric Data Pipeline / Spark definitions; created once Git integration exports pipeline items (see the CI/CD roadmap row below).
 
 ## Roadmap
@@ -166,10 +170,12 @@ fabric-pe-vc-analytics/
 | Architecture v1 | ✅ Complete | Documented in `docs/` |
 | Workspace/domain setup | ✅ Complete (as-built ≠ target) | Single workspace `pevc-dev` under the `Investment Analytics` domain (DD-14); the documented workspace-per-layer target (DD-10) isn't provisioned |
 | Conformed Delta build with bitemporal modelling | ✅ Complete | 4-stage pipeline (`notebooks/`); reconciliation scored 1.000/1.000 against synthetic conflict oracle |
-| Gold star schema (Lakehouse Delta) | 🔨 In progress | Grain accepted (DD-15); `notebooks/05_gold_star_schema.ipynb` written, not yet executed against Fabric |
-| DirectLake semantic model | ⬜ Not started | No `semantic_model/` artefact yet |
+| Gold star schema (Lakehouse Delta) | ✅ Complete | Grain per DD-15; `notebooks/05_gold_star_schema.ipynb` executed and certified against the live `pevc-dev` tenant |
+| DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, all 5 core measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) |
+| Power BI report | ✅ Complete | `LP Portfolio Performance` — KPI cards, vintage/sector tables, sector-concentration chart, DirectLake-connected |
+| Git integration (Fabric ↔ GitHub) | ✅ Complete | `pevc-dev` workspace connected to this repo, folder `fabric/pevc-dev/` |
 | Azure OpenAI integration layer | 📐 Designed | Fusion agent pattern committed in `docs/design_decisions.md` DD-13; not yet built |
-| Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Dev-only at portfolio scope |
+| Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Git integration is live, Dev/Test/Prod promotion pipelines are not |
 | Microsoft Purview lineage integration | 📐 Designed, not implemented | Governance model assumes Purview (see `docs/governance.md`); not wired up in the trial tenant |
 
 ## Related work

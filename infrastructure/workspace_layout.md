@@ -21,20 +21,24 @@ provision. Don't read the target section as current state.
 ## As-built: single workspace `pevc-dev`
 
 **Capacity:** F2 (trial), shared by everything below — no per-layer capacity split.
-**Purpose:** All layers (ingestion, conformed, and — once built — Gold/BI/AI) in one
+**Purpose:** All layers (ingestion, conformed, Gold, BI — and, once built, AI) in one
 workspace. Separation is by item (lakehouse, notebook), not by workspace.
 
 **Items (current):**
 - Lakehouse: `landing_lakehouse` (+ SQL analytics endpoint) — raw feeds, reference files.
 - Lakehouse: `conformed_lakehouse` (+ SQL analytics endpoint) — Delta tables per domain
   entity (see [`../docs/data_model.md`](../docs/data_model.md)).
+- Lakehouse: `gold_lakehouse` (+ SQL analytics endpoint) — star schema per DD-15
+  (`gold_dim_date`, `gold_dim_company`, `gold_dim_investor`, `gold_fact_investment`).
 - Notebooks: `01_schema_validation`, `02_reconciliation`, `03_bitemporal_load`,
-  `04_data_quality_assertions` — the conformed-layer build (see
+  `04_data_quality_assertions`, `05_gold_star_schema` — the conformed + Gold build (see
   [`../notebooks/README.md`](../notebooks/README.md)).
+- Semantic Model (DirectLake): `pevc-semantic-model` — over the 4 Gold tables, 5 core
+  measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage
+  performance).
+- Report: `LP Portfolio Performance` — Power BI report consuming the semantic model.
 
 **Items (planned, land in the same workspace per DD-14):**
-- Gold Lakehouse (star schema — see the design note this session will produce).
-- Semantic Model (DirectLake) once the BI work starts.
 - AI serving artefacts (retrieval functions, prompt templates) once WS5 starts.
 
 **RBAC (as-built):** single owner (Admin). The Member/Viewer tiering described in the
@@ -170,8 +174,11 @@ query patterns are unpredictable but moderate.
 
 ## Git integration
 
-**As-built:** `pevc-dev` is Git-connected to this repository as a single workspace —
-there's no per-layer folder split to Git-connect separately.
+**As-built:** `pevc-dev` is Git-connected to this repository (GitHub), folder
+`fabric/pevc-dev/`, as a single workspace — there's no per-layer folder split to
+Git-connect separately. Fabric's Commit operation writes one subfolder per workspace
+item there (`<name>.Notebook/`, `<name>.Lakehouse/`, `<name>.SemanticModel/`,
+`<name>.Report/`); it is not hand-edited.
 
 **Target production layout**, if workspace-per-layer were built, would Git-connect each
 workspace to a workspace-scoped folder:
@@ -189,4 +196,4 @@ Promotion across Dev → Test → Prod is via Fabric deployment pipelines. See [
 
 ---
 
-*Last updated: 2026-07-13. Layout reflects portfolio implementation (DD-14); production sizing and workspace-split notes are target-design guidance, not built.*
+*Last updated: 2026-07-14. Layout reflects portfolio implementation (DD-14); production sizing and workspace-split notes are target-design guidance, not built.*

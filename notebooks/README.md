@@ -92,6 +92,13 @@ notebook was written:
    `/Files/landing/reference`. Notebook 05 has no `REFERENCE_FILES` parameter — it only
    reads `conformed_*` tables.
 3. **Order:** run 01 → 02 → 03 → 04 → 05. Each depends on the prior stage's tables.
+4. **Cross-lakehouse reads on schema-enabled lakehouses:** if `conformed_lakehouse` has
+   schemas enabled (tables shown under `Tables > dbo` rather than directly under
+   `Tables` in the Lakehouse explorer), a secondary-attached lakehouse's tables aren't
+   resolvable by bare name from the notebook's default catalog context. Notebook 05's
+   `conformed()` helper qualifies reads as `conformed_lakehouse.dbo.<table>` for exactly
+   this reason — if you hit `TABLE_OR_VIEW_NOT_FOUND` on an otherwise-correctly-attached
+   lakehouse, this is the first thing to check.
 
 Parameter cells use **placeholder GUIDs** intentionally — no tenant identity is committed.
 
