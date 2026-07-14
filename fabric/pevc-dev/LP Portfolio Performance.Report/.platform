@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "LP Portfolio Performance"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "53cac5fd-e121-a37d-4bd8-0f09a29c627b"
+  }
+}

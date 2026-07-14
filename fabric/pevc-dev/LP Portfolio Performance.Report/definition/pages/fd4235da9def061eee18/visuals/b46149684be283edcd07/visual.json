@@ -1,0 +1,129 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.10.0/schema.json",
+  "name": "b46149684be283edcd07",
+  "position": {
+    "x": 9.9301784328937153,
+    "y": 289.96121024049648,
+    "z": 1,
+    "height": 280.0310318076028,
+    "width": 426.99767261442975,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_dim_company"
+                    }
+                  },
+                  "Property": "sector_group"
+                }
+              },
+              "queryRef": "gold_dim_company.sector_group",
+              "nativeQueryRef": "sector_group"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_fact_investment"
+                    }
+                  },
+                  "Property": "MOIC"
+                }
+              },
+              "queryRef": "gold_fact_investment.MOIC",
+              "nativeQueryRef": "MOIC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_fact_investment"
+                    }
+                  },
+                  "Property": "Sector Concentration %"
+                }
+              },
+              "queryRef": "gold_fact_investment.Sector Concentration %",
+              "nativeQueryRef": "Sector Concentration %"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "gold_dim_company"
+                  }
+                },
+                "Property": "sector_group"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "7610088924f8dcc4fc9b",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_dim_company"
+              }
+            },
+            "Property": "sector_group"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "737bca51e251ba55459a",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_fact_investment"
+              }
+            },
+            "Property": "MOIC"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "ca7e40872fb9c6707b0d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_fact_investment"
+              }
+            },
+            "Property": "Sector Concentration %"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

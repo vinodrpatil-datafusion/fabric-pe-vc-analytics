@@ -1,0 +1,112 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.10.0/schema.json",
+  "name": "55b75cada2088c2fe0c3",
+  "position": {
+    "x": 9.9301784328937153,
+    "y": 0,
+    "z": 0,
+    "height": 280.0310318076028,
+    "width": 501.47401086113263,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_dim_investor"
+                    }
+                  },
+                  "Property": "vintage_year"
+                }
+              },
+              "queryRef": "gold_dim_investor.vintage_year",
+              "nativeQueryRef": "vintage_year"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_fact_investment"
+                    }
+                  },
+                  "Property": "MOIC"
+                }
+              },
+              "queryRef": "gold_fact_investment.MOIC",
+              "nativeQueryRef": "MOIC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_fact_investment"
+                    }
+                  },
+                  "Property": "IRR (proxy)"
+                }
+              },
+              "queryRef": "gold_fact_investment.IRR (proxy)",
+              "nativeQueryRef": "IRR (proxy)"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "bc82aec78afb80a007cd",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_dim_investor"
+              }
+            },
+            "Property": "vintage_year"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "99055cfcdc00a268cf5d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_fact_investment"
+              }
+            },
+            "Property": "MOIC"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "2aaa639a07c3c0f4fa74",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_fact_investment"
+              }
+            },
+            "Property": "IRR (proxy)"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}
