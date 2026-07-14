@@ -116,6 +116,20 @@ The shape this enables: "Which funds backed B2B SaaS companies at Series B in 20
 
 See [`docs/data_model.md`](docs/data_model.md) for the schema and the rationale behind each modelling choice.
 
+## Portfolio report
+
+The domain model, DirectLake semantic model, and measure layer culminate in one report page, built from the LP's seat — not the GP's.
+
+![LP Portfolio Performance report](docs/images/lp-portfolio-performance.png)
+<!-- Screenshot not yet added — see notebooks/README.md or ask for the current report screenshot. -->
+
+- **KPI row (Total Invested, NAV proxy, MOIC, IRR proxy)** — the four numbers an LP asks for first when they open a portfolio review. `NAV (proxy)` and `IRR (proxy)` both carry an explicit honesty caveat (DD-15, DD-16): this dataset has no periodic fair-value marks, so both are documented approximations, not audited fund figures — a real LP report would need to say the same thing about any GP-supplied NAV that isn't independently marked.
+- **MOIC & IRR by vintage year** — the standard way LPs compare fund performance across time: is the 2011 vintage actually outperforming 2019, or does it just look that way because it's had more years to mature? Vintage-year slicing is how that question gets asked honestly.
+- **MOIC & sector concentration** — an LP's risk question, not a GP's allocation question: how much of *my* capital sits in one sector, and is that concentration paying off (high MOIC) or just a bet that hasn't been tested yet (low MOIC, high concentration)?
+- **Portfolio concentration by sector (chart)** — the same concentration data, shaped for a two-second scan rather than a table read — the visual an LP actually screenshots into an IC memo.
+
+Every number on this page traces backward through a real lineage: landing feeds → Stage B reconciliation (conflict-flagged, not silently resolved) → Stage C bitemporal load → Gold star schema (point-in-time joined) → DirectLake semantic model. Nothing here is a spreadsheet formula sitting on top of a CSV.
+
 ## AI layer
 
 Azure OpenAI is integrated against the conformed Delta layer, not the raw ingestion layer. The principle: the LLM reasons over validated, reconciled, source-attributed data — never over raw feeds.
