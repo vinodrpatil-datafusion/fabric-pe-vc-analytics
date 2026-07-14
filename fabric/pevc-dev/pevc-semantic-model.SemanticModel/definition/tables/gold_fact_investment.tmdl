@@ -46,12 +46,14 @@ table gold_fact_investment
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	measure MOIC = DIVIDE([NAV (proxy)], [Total Invested])
-		formatString: 0
+		formatString: 0.00"x"
 		lineageTag: 915790f9-b6fc-4647-885d-91d1477aa7e2
 
 		changedProperty = Name
 
 		changedProperty = FormatString
+
+		annotation PBI_FormatHint = {"isCustom":true}
 
 	measure 'IRR (proxy)' =
 			
@@ -59,11 +61,12 @@ table gold_fact_investment
 			VAR Years = [Cost-Weighted Avg Years Held]
 			RETURN
 			IF(AND(NOT ISBLANK(PooledMOIC), Years > 0), PooledMOIC ^ (1 / Years) - 1, BLANK())
+		formatString: 0.00%;-0.00%;0.00%
 		lineageTag: 31602d65-4777-4484-ad47-5b20be718d3d
 
 		changedProperty = Name
 
-		annotation PBI_FormatHint = {"isGeneralNumber":true}
+		changedProperty = FormatString
 
 	measure 'Sector Concentration %' =
 			
