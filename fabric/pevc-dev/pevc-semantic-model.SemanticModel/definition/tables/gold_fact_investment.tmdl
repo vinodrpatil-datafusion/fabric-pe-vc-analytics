@@ -45,18 +45,13 @@ table gold_fact_investment
 
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
-	measure MOIC = ```
-			DIVIDE([NAV (proxy)], [Total Invested])
-			
-			```
+	measure MOIC = DIVIDE([NAV (proxy)], [Total Invested])
 		formatString: 0
 		lineageTag: 915790f9-b6fc-4647-885d-91d1477aa7e2
 
 		changedProperty = Name
 
 		changedProperty = FormatString
-
-		annotation PBI_FormatHint = {"isDecimal":true}
 
 	measure 'IRR (proxy)' =
 			
