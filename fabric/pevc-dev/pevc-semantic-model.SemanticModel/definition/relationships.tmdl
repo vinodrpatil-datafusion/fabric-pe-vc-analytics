@@ -2,10 +2,6 @@ relationship 7882f8d7-afa2-e5a3-b4db-91f3fc987588
 	fromColumn: gold_fact_investment.company_sk
 	toColumn: gold_dim_company.company_sk
 
-relationship 5606850f-4b35-1353-2262-207f7cca2150
-	fromColumn: gold_fact_investment.investment_sk
-	toColumn: gold_dim_investor.investor_sk
-
 relationship e5dc746d-0c7a-162c-bb52-64004f5f96f1
 	fromColumn: gold_fact_investment.effective_date_sk
 	toColumn: gold_dim_date.date_sk
@@ -14,4 +10,8 @@ relationship b1e615a1-2894-0920-0cf8-de429f08bf47
 	isActive: false
 	fromColumn: gold_fact_investment.exit_date_sk
 	toColumn: gold_dim_date.date_sk
+
+relationship d1b83a19-b374-e60f-5884-a89c57e96f9a
+	fromColumn: gold_fact_investment.investor_sk
+	toColumn: gold_dim_investor.investor_sk
 
