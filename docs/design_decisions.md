@@ -463,4 +463,58 @@ this repo's `seed=42` reproducibility discipline elsewhere.
 
 ---
 
-*Last updated: 2026-07-13. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
+## DD-16. IRR-proxy method (WS4)
+
+**Status:** Accepted 2026-07-14 (proposed and confirmed with the maintainer same day,
+before any DAX was written, per the same record-before-code protocol as DD-15).
+
+**Choice:** Approximate IRR via MOIC annualisation — `MOIC^(1/years_held) − 1` — applied
+once at whatever grain the measure is sliced to (investment, fund, vintage, sector),
+not averaged up from per-investment results.
+
+**MOIC, per investment:**
+- Realised (`exit_date` populated): `realised_return_multiple`, already in
+  `fact_investment` — no calculation needed.
+- Unrealised: `1.0×`. Treats current value as cost basis, consistent with the NAV-proxy
+  convention DD-15 already committed to (`SUM(participation_amount)` for open
+  positions) — this decision reuses that same convention rather than inventing a second
+  one.
+
+**Pooled MOIC, at any aggregate grain (fund, vintage, sector):**
+`SUM(value_equivalent) / SUM(participation_amount)`, where `value_equivalent` =
+`participation_amount × realised_return_multiple` for realised rows and
+`participation_amount` for unrealised rows. Standard pooled-MOIC pattern — avoids the
+distortion of simple-averaging per-investment multiples, which over-weights small
+positions equally with large ones.
+
+**IRR proxy, per investment:** `MOIC^(1/years_held) − 1`, where `years_held` =
+`(exit_date` or `TODAY())` − `effective_date`, in years.
+
+**IRR proxy, at any aggregate grain:** the annualisation is applied **once**, to the
+pooled MOIC and a cost-weighted average holding period —
+`pooled_MOIC^(1 / cost_weighted_avg_years_held) − 1` — not by averaging per-investment
+IRRs. Averaging per-investment IRRs directly would over-weight short-lived or small
+deals relative to their actual capital contribution.
+
+**Honesty caveat (mandatory in the measure description, mirroring DD-15's NAV-proxy
+note):** this assumes a single lump-sum cash flow in and a single lump-sum flow out —
+no interim capital calls or partial distributions, because the conformed layer doesn't
+carry them (`data_model.md` §5: fund-level performance is explicitly not
+pre-computed/modelled at that granularity). Directionally correct for ranking and
+comparison (better/worse vintage, sector, fund) but must not be presented as an audited
+money-weighted fund IRR.
+
+**Rejected: XIRR over synthesised cash-flow events.** Would give a real money-weighted
+rate, but requires fabricating interim cash-flow *timing* the source data doesn't have
+— manufacturing that timing would produce false precision (a specific-looking IRR
+number resting on invented dates), which is worse than a clearly-labelled proxy.
+
+**Rejected: skip IRR entirely, report MOIC + realised/unrealised split only.** The most
+defensible option on data-honesty grounds alone, but drops a measure LPs — this
+platform's consumer perspective — specifically expect to see when assessing fund
+performance. A proxy with an explicit, visible caveat serves that audience better than
+omission.
+
+---
+
+*Last updated: 2026-07-14. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
