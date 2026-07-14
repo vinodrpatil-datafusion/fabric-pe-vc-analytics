@@ -47,6 +47,7 @@ Rates are tunable in `pevc_generator/reference.py` (`SOURCE_PROFILES`).
 1. **Company existence ~32% is high** for two premium vendors that in reality overlap tightly. Independent coverage draws overstate divergence. Acceptable for a demo (visible reconciliation work); tune `coverage` up and correlate the draws for stricter realism.
 2. **Edge-existence conflation — RESOLVED.** Genuine edge disputes (~13%) are now distinct from coverage-driven gaps (~29%). Edge-drop is applied only to companies both sources cover, so a one-source edge on a both-covered company is unambiguously a dispute; the `expected_conflicts` ledger records the distinction.
 3. **Entity resolution is assumed solved** via `vendor_id_mapping`. Real platforms must fuzzy-match across vendors. Documented as out of scope, consistent with `architecture.md` §4.
+4. **A small number of funding rounds close before their company's `founded_date`** (~7% of rounds in the `seed=42`/`small` sample) — an uncorrelated-draw artifact between `canonical.py`'s company and round generation, not intentional test data. Downstream, WS3's Gold `fact_investment` cannot resolve a point-in-time `dim_company` version for the affected investments; its Stage E DQ check treats this as a soft `WARN`, not a hard failure — see `notebooks/05_gold_star_schema.ipynb` §8.
 
 ## Bitemporal boundary
 
