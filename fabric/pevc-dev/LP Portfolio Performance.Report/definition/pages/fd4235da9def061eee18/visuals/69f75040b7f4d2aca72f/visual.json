@@ -1,0 +1,47 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.10.0/schema.json",
+  "name": "69f75040b7f4d2aca72f",
+  "position": {
+    "x": 356.57142857142856,
+    "y": 423.31428571428569,
+    "z": 4002,
+    "height": 273.37142857142857,
+    "width": 389.48571428571427,
+    "tabOrder": 4002
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Data Quality — Certified",
+                    "textStyle": {
+                      "fontWeight": "bold",
+                      "fontFamily": "-apple-system, \"system-ui\", Segoe UI, Roboto, sans-serif",
+                      "fontSize": "16pt",
+                      "color": "#ffffff"
+                    }
+                  },
+                  {
+                    "value": " Reconciliation: 1.000 / 1.000 match vs. synthetic conflict oracle (666/666 conflicts correctly resolved or flagged) Gold DQ assertions: 41/41 hard checks passed (1 documented WARN — known generator calibration noise, see SYNTHETIC_DATA.md) As of: notebook run 2026-07-14",
+                    "textStyle": {
+                      "fontFamily": "-apple-system, \"system-ui\", Segoe UI, Roboto, sans-serif",
+                      "fontSize": "16pt",
+                      "color": "#ffffff"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
