@@ -3,7 +3,7 @@
 > A reference architecture and working portfolio project for institutional private equity and venture capital analytics, built on Microsoft Fabric.
 
 **Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration and deployment pipelines remain in progress.
-**Author:** Vinod Patil — Enterprise AI & Data Architect ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
+**Author:** Vinod Patil — Lead Data & AI Engineer ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
 ---
@@ -121,7 +121,6 @@ See [`docs/data_model.md`](docs/data_model.md) for the schema and the rationale 
 The domain model, DirectLake semantic model, and measure layer culminate in one report page, built from the LP's seat — not the GP's.
 
 ![LP Portfolio Performance report](docs/images/lp-portfolio-performance.png)
-<!-- Screenshot not yet added — see notebooks/README.md or ask for the current report screenshot. -->
 
 - **KPI row (Total Invested, NAV proxy, MOIC, IRR proxy)** — the four numbers an LP asks for first when they open a portfolio review. `NAV (proxy)` and `IRR (proxy)` both carry an explicit honesty caveat (DD-15, DD-16): this dataset has no periodic fair-value marks, so both are documented approximations, not audited fund figures — a real LP report would need to say the same thing about any GP-supplied NAV that isn't independently marked.
 - **MOIC & IRR by vintage year** — the standard way LPs compare fund performance across time: is the 2011 vintage actually outperforming 2019, or does it just look that way because it's had more years to mature? Vintage-year slicing is how that question gets asked honestly.
@@ -142,7 +141,7 @@ Implementation pattern:
 4. LLM call with structured output schema enforcement
 5. Output validation against schema; failures route to human review
 
-The accompanying agentic AI work — the AI Business Analyst Agent — lives in a [separate repository](https://github.com/vinodrpatil-datafusion/ai-business-analyst-agent) and demonstrates multi-agent decomposition patterns that would consume this platform.
+The accompanying agentic AI work — the AI Business Analyst Agent — lives in a [separate repository](https://github.com/vinodrpatil-datafusion/ai-business-analyst-agent) and demonstrates a deterministic-core, single-pipeline agentic pattern (statistics computed in code, Azure OpenAI narrating a bounded summary) that would consume this platform's conformed layer.
 
 ## Repository structure
 
