@@ -1,0 +1,215 @@
+table gold_fact_investment
+	lineageTag: af169e54-a302-42cb-8a1b-d0f32c985d97
+	sourceLineageTag: [dbo].[gold_fact_investment]
+
+	column investment_sk
+		dataType: string
+		lineageTag: 4e9ead3b-376a-4335-9492-e1f43a5605ce
+		sourceLineageTag: investment_sk
+		summarizeBy: none
+		sourceColumn: investment_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column investment_id
+		dataType: string
+		lineageTag: d1294de9-8639-42a0-99dd-adc54f449438
+		sourceLineageTag: investment_id
+		summarizeBy: none
+		sourceColumn: investment_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column company_sk
+		dataType: string
+		lineageTag: 70776980-274d-4f86-9411-628f3e7bc5bc
+		sourceLineageTag: company_sk
+		summarizeBy: none
+		sourceColumn: company_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column investor_sk
+		dataType: string
+		lineageTag: a2a02473-1a2a-4562-b162-1d4eeb58c5ac
+		sourceLineageTag: investor_sk
+		summarizeBy: none
+		sourceColumn: investor_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column effective_date_sk
+		dataType: int64
+		formatString: 0
+		lineageTag: 6bc5f660-239c-4ea0-b2f8-cb027e671ba6
+		sourceLineageTag: effective_date_sk
+		summarizeBy: none
+		sourceColumn: effective_date_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column exit_date_sk
+		dataType: int64
+		formatString: 0
+		lineageTag: 82cd6c0b-b2e2-4981-a4b1-6f770868202f
+		sourceLineageTag: exit_date_sk
+		summarizeBy: sum
+		sourceColumn: exit_date_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column round_id
+		dataType: string
+		lineageTag: df19f965-669e-45ab-a250-343c025d078d
+		sourceLineageTag: round_id
+		summarizeBy: none
+		sourceColumn: round_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column round_type
+		dataType: string
+		lineageTag: 35042702-ec29-4ee2-8855-48606795dec0
+		sourceLineageTag: round_type
+		summarizeBy: none
+		sourceColumn: round_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column instrument_type
+		dataType: string
+		lineageTag: c0c67802-a4e9-4152-9a81-87f1fa5112d9
+		sourceLineageTag: instrument_type
+		summarizeBy: none
+		sourceColumn: instrument_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column amount_raised
+		dataType: double
+		lineageTag: 7fda98ef-5e13-430e-a6f9-46084a564605
+		sourceLineageTag: amount_raised
+		summarizeBy: sum
+		sourceColumn: amount_raised
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column currency
+		dataType: string
+		lineageTag: 62018760-eafc-45f4-a783-1219bd4c7050
+		sourceLineageTag: currency
+		summarizeBy: none
+		sourceColumn: currency
+
+		annotation SummarizationSetBy = Automatic
+
+	column pre_money_valuation
+		dataType: double
+		lineageTag: f27bea59-5440-414e-a7dc-8c79f7892007
+		sourceLineageTag: pre_money_valuation
+		summarizeBy: sum
+		sourceColumn: pre_money_valuation
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column post_money_valuation
+		dataType: double
+		lineageTag: 738243b0-97a9-4c86-be21-eb1947bb63f9
+		sourceLineageTag: post_money_valuation
+		summarizeBy: sum
+		sourceColumn: post_money_valuation
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column participation_amount
+		dataType: double
+		lineageTag: 0b2d3521-fbe1-4fe0-8c3f-517af5247d69
+		sourceLineageTag: participation_amount
+		summarizeBy: sum
+		sourceColumn: participation_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column is_lead
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 7c91fe31-8d86-410d-b798-48f6f1175082
+		sourceLineageTag: is_lead
+		summarizeBy: none
+		sourceColumn: is_lead
+
+		annotation SummarizationSetBy = Automatic
+
+	column board_seat_taken
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 69638454-4de8-478f-b64c-8f24ec1ec8fa
+		sourceLineageTag: board_seat_taken
+		summarizeBy: none
+		sourceColumn: board_seat_taken
+
+		annotation SummarizationSetBy = Automatic
+
+	column effective_date
+		dataType: string
+		lineageTag: ceafd23d-d500-4310-bb7f-4b226de88cf5
+		sourceLineageTag: effective_date
+		summarizeBy: none
+		sourceColumn: effective_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column exit_date
+		dataType: string
+		lineageTag: f368658e-0582-4649-9a82-ca40859c71da
+		sourceLineageTag: exit_date
+		summarizeBy: none
+		sourceColumn: exit_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column exit_type
+		dataType: string
+		lineageTag: 84f9a6e6-3298-4be0-be89-b21c275cef35
+		sourceLineageTag: exit_type
+		summarizeBy: none
+		sourceColumn: exit_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_realized
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 2403b794-15ce-4eaa-9ecc-39c03a3d6bb8
+		sourceLineageTag: is_realized
+		summarizeBy: none
+		sourceColumn: is_realized
+
+		annotation SummarizationSetBy = Automatic
+
+	column realised_return_multiple
+		dataType: double
+		lineageTag: 3853fffe-80af-4b1e-b1d1-b0ea23972af4
+		sourceLineageTag: realised_return_multiple
+		summarizeBy: sum
+		sourceColumn: realised_return_multiple
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition gold_fact_investment = entity
+		mode: directLake
+		source
+			entityName: gold_fact_investment
+			schemaName: dbo
+			expressionSource: 'DirectLake - gold_lakehouse'
+

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "pevc-semantic-model"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "c745e424-cf7d-b2ce-4223-ef4fbcf29109"
+  }
+}

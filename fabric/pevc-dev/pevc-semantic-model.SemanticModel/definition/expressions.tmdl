@@ -1,0 +1,11 @@
+expression 'DirectLake - gold_lakehouse' =
+		let
+		    Source = AzureStorage.DataLake("https://onelake.dfs.fabric.microsoft.com/f1f589c3-d0a9-4c55-8dee-b180ff4b4611/4d820914-0336-4005-85c7-95b26729286f", [HierarchicalNavigation=true])
+		in
+		    Source
+	lineageTag: a602bda1-4636-4fc9-986d-fa87e7222b1f
+
+	annotation PBI_IncludeFutureArtifacts = False
+
+	annotation PBI_RemovedChildren = [{"remoteItemId":{"analysisServicesObject":{"sourceName":null,"sourceLineageTag":"[dbo].[gold_dq_assertions_report]"}},"objectType":"Table"}]
+

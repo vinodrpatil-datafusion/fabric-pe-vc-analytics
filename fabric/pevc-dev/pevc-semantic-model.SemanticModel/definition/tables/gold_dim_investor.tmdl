@@ -1,0 +1,124 @@
+table gold_dim_investor
+	lineageTag: 1a4fcf59-8c40-4bb9-9f61-4d099110176c
+	sourceLineageTag: [dbo].[gold_dim_investor]
+
+	column investor_sk
+		dataType: string
+		lineageTag: 04567266-698d-407a-bd8b-5adb601382c9
+		sourceLineageTag: investor_sk
+		summarizeBy: none
+		sourceColumn: investor_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column investor_id
+		dataType: string
+		lineageTag: 2d1e9feb-8842-45b4-b583-62e0e643b539
+		sourceLineageTag: investor_id
+		summarizeBy: none
+		sourceColumn: investor_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column investor_type
+		dataType: string
+		lineageTag: 96d8ef87-4c12-4d37-9b2f-3af05ccf795b
+		sourceLineageTag: investor_type
+		summarizeBy: none
+		sourceColumn: investor_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column legal_name
+		dataType: string
+		lineageTag: 3cf0d46a-805e-440f-84e1-d89b503ea4ff
+		sourceLineageTag: legal_name
+		summarizeBy: none
+		sourceColumn: legal_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column vintage_year
+		dataType: double
+		lineageTag: 76f20684-7e7c-4c6c-94a1-2dfc72c5ce1e
+		sourceLineageTag: vintage_year
+		summarizeBy: none
+		sourceColumn: vintage_year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column fund_size
+		dataType: double
+		lineageTag: beeaf764-d6ec-41ed-94b4-bd85a453d3d2
+		sourceLineageTag: fund_size
+		summarizeBy: none
+		sourceColumn: fund_size
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column geographic_focus
+		dataType: string
+		lineageTag: f7b0e5c6-b512-4a89-8544-445eaf133859
+		sourceLineageTag: geographic_focus
+		summarizeBy: none
+		sourceColumn: geographic_focus
+
+		annotation SummarizationSetBy = Automatic
+
+	column sector_focus
+		dataType: string
+		lineageTag: 1334025a-682b-4756-89e6-a5d527420829
+		sourceLineageTag: sector_focus
+		summarizeBy: none
+		sourceColumn: sector_focus
+
+		annotation SummarizationSetBy = Automatic
+
+	column stage_focus
+		dataType: string
+		lineageTag: 437bf3e7-b0e3-4dde-8ff7-442d4d3916ed
+		sourceLineageTag: stage_focus
+		summarizeBy: none
+		sourceColumn: stage_focus
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_from
+		dataType: string
+		lineageTag: 776c549b-b764-41d7-901b-9237102585be
+		sourceLineageTag: valid_from
+		summarizeBy: none
+		sourceColumn: valid_from
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_to
+		dataType: string
+		lineageTag: 2abee9fe-6596-49be-aa1b-6f592cc0feba
+		sourceLineageTag: valid_to
+		summarizeBy: none
+		sourceColumn: valid_to
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_current
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 11d4aa0e-34a6-4161-b9ca-9739cdffb640
+		sourceLineageTag: is_current
+		summarizeBy: none
+		sourceColumn: is_current
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_dim_investor = entity
+		mode: directLake
+		source
+			entityName: gold_dim_investor
+			schemaName: dbo
+			expressionSource: 'DirectLake - gold_lakehouse'
+

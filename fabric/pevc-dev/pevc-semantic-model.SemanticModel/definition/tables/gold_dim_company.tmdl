@@ -1,0 +1,102 @@
+table gold_dim_company
+	lineageTag: 0bb83012-a32c-4f2e-afd4-4cd035fae231
+	sourceLineageTag: [dbo].[gold_dim_company]
+
+	column company_sk
+		dataType: string
+		lineageTag: 996aba52-a67e-4402-b9f4-0485a288dd75
+		sourceLineageTag: company_sk
+		summarizeBy: none
+		sourceColumn: company_sk
+
+		annotation SummarizationSetBy = Automatic
+
+	column company_id
+		dataType: string
+		lineageTag: 3cc7a029-64d6-4ba2-bb69-fb5279a7378c
+		sourceLineageTag: company_id
+		summarizeBy: none
+		sourceColumn: company_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column legal_name
+		dataType: string
+		lineageTag: e9b4437e-d916-4b09-bc48-d27d0e01d1e4
+		sourceLineageTag: legal_name
+		summarizeBy: none
+		sourceColumn: legal_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column sector_group
+		dataType: string
+		lineageTag: 96cba755-700c-490f-8634-095339e72966
+		sourceLineageTag: sector_group
+		summarizeBy: none
+		sourceColumn: sector_group
+
+		annotation SummarizationSetBy = Automatic
+
+	column sector_taxonomy
+		dataType: string
+		lineageTag: 27a95f49-d0f4-4d36-b674-a07616689cd7
+		sourceLineageTag: sector_taxonomy
+		summarizeBy: none
+		sourceColumn: sector_taxonomy
+
+		annotation SummarizationSetBy = Automatic
+
+	column country
+		dataType: string
+		lineageTag: 5df71009-4768-4252-8b13-e362cbe8afc1
+		sourceLineageTag: country
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column founded_date
+		dataType: string
+		lineageTag: b813cb4f-0ea1-4e7c-a8ec-3c6518fd202b
+		sourceLineageTag: founded_date
+		summarizeBy: none
+		sourceColumn: founded_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_from
+		dataType: string
+		lineageTag: eaa53320-bd04-44b0-9c15-16d801832106
+		sourceLineageTag: valid_from
+		summarizeBy: none
+		sourceColumn: valid_from
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_to
+		dataType: string
+		lineageTag: 6f54cb59-91bb-4a9a-87a0-afb5fca425da
+		sourceLineageTag: valid_to
+		summarizeBy: none
+		sourceColumn: valid_to
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_current
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 0d2b8564-fe14-4ee5-9624-b74f4d348232
+		sourceLineageTag: is_current
+		summarizeBy: none
+		sourceColumn: is_current
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_dim_company = entity
+		mode: directLake
+		source
+			entityName: gold_dim_company
+			schemaName: dbo
+			expressionSource: 'DirectLake - gold_lakehouse'
+
