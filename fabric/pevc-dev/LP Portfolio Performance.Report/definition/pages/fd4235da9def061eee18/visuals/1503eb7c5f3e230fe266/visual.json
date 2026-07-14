@@ -42,7 +42,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'LP Portfolio Performance — synthetic PE/VC dataset, as of {today''s date}'"
+                  "Value": "'LP Portfolio Performance — synthetic PE/VC dataset, as of July 2026'"
                 }
               }
             }

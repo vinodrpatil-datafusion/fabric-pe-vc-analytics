@@ -472,3 +472,19 @@ gold_dim_company.filter(F.col("company_id") == sample_company_id) \
 # 
 # **WS4** (DirectLake semantic model, S2) reads these four Gold tables and defines the
 # five core LP measures on top of them.
+
+# CELL ********************
+
+spark.read.table("gold_fact_investment").agg(
+    F.sum("participation_amount").alias("total"),
+    F.count("participation_amount").alias("non_null"),
+    F.count("*").alias("total_rows")
+).show()
+
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
