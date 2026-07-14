@@ -71,11 +71,12 @@ table gold_fact_investment
 	measure 'Sector Concentration %' =
 			
 			DIVIDE([Total Invested], CALCULATE([Total Invested], ALL(gold_dim_company[sector_group])))
+		formatString: 0.00%;-0.00%;0.00%
 		lineageTag: c6fb1e3d-faa5-4f63-949e-04a2a2ae5997
 
 		changedProperty = Name
 
-		annotation PBI_FormatHint = {"isGeneralNumber":true}
+		changedProperty = FormatString
 
 	column investment_sk
 		dataType: string
