@@ -18,6 +18,12 @@ from .scale import ScaleProfile
 
 TODAY = date(2026, 6, 1)
 
+# Round/fund size constants below (stage_scale, fund_size lognormal params) are
+# calibrated in $ millions for readability — this converts generated amounts to
+# actual currency units before they're written out, matching data_model.md's
+# "amount_raised: In `currency`" contract (raw units, not millions).
+MILLION = 1_000_000
+
 
 def _rand_date(rng, start: date, end: date) -> date:
     span = (end - start).days
@@ -88,11 +94,11 @@ def _gen_investors(profile, rng) -> list[dict]:
         is_fund = itype in ("vc_fund", "pe_fund", "corporate_vc", "sovereign_fund")
         vintage = int(rng.integers(2008, 2024)) if is_fund else None
         if itype == "vc_fund":
-            fund_size = round(float(rng.lognormal(5.6, 0.8)), 1)   # ~$270M median
+            fund_size = round(float(rng.lognormal(5.6, 0.8)) * MILLION, 1)   # ~$270M median
         elif itype == "pe_fund":
-            fund_size = round(float(rng.lognormal(7.2, 0.7)), 1)   # ~$1.3B median
+            fund_size = round(float(rng.lognormal(7.2, 0.7)) * MILLION, 1)   # ~$1.3B median
         elif itype in ("corporate_vc", "sovereign_fund"):
-            fund_size = round(float(rng.lognormal(6.5, 0.9)), 1)
+            fund_size = round(float(rng.lognormal(6.5, 0.9)) * MILLION, 1)
         else:
             fund_size = None
         out.append({
@@ -152,7 +158,7 @@ def _gen_rounds_and_investments(profile, companies, investors, rng):
             stage_scale = {"Pre-Seed": 1.0, "Seed": 2.5, "Series A": 8.0, "Series B": 20.0,
                            "Series C": 45.0, "Series D": 90.0, "Series E": 150.0,
                            "Bridge": 4.0, "Growth": 120.0}.get(rtype, 10.0)
-            amount = round(float(rng.lognormal(np.log(stage_scale), 0.5)), 2)
+            amount = round(float(rng.lognormal(np.log(stage_scale), 0.5)) * MILLION, 2)
             post = round(amount / float(rng.uniform(0.10, 0.30)), 2)
             pre = round(post - amount, 2)
             instrument = _weighted(rng, R.INSTRUMENT_TYPES, R.INSTRUMENT_WEIGHTS)
