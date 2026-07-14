@@ -3,10 +3,10 @@
   "name": "55b75cada2088c2fe0c3",
   "position": {
     "x": 9.9301784328937153,
-    "y": 0,
+    "y": 165.83397982932505,
     "z": 0,
-    "height": 280.0310318076028,
-    "width": 501.47401086113263,
+    "height": 343.58417377812253,
+    "width": 346.5632273079907,
     "tabOrder": 0
   },
   "visual": {
@@ -60,6 +60,28 @@
           ]
         }
       }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'MOIC & IRR by Vintage Year'"
+                }
+              }
+            }
+          }
+        }
+      ]
     },
     "drillFilterOtherVisuals": true
   },

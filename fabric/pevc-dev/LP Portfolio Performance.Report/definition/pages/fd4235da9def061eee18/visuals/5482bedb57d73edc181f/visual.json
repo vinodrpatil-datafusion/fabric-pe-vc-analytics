@@ -1,33 +1,47 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.10.0/schema.json",
-  "name": "b46149684be283edcd07",
+  "name": "5482bedb57d73edc181f",
   "position": {
-    "x": 374.36772692009311,
-    "y": 165.83397982932505,
-    "z": 1,
-    "height": 335.64003103180761,
-    "width": 409.12335143522108,
-    "tabOrder": 1
+    "x": 0,
+    "y": 44.685802948021717,
+    "z": 2,
+    "height": 108.23894491854151,
+    "width": 1255.1745539177657,
+    "tabOrder": 2
   },
   "visual": {
-    "visualType": "tableEx",
+    "visualType": "cardVisual",
     "query": {
       "queryState": {
-        "Values": {
+        "Data": {
           "projections": [
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "gold_dim_company"
+                      "Entity": "gold_fact_investment"
                     }
                   },
-                  "Property": "sector_group"
+                  "Property": "Total Invested"
                 }
               },
-              "queryRef": "gold_dim_company.sector_group",
-              "nativeQueryRef": "sector_group"
+              "queryRef": "gold_fact_investment.Total Invested",
+              "nativeQueryRef": "Total Invested"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_fact_investment"
+                    }
+                  },
+                  "Property": "NAV (proxy)"
+                }
+              },
+              "queryRef": "gold_fact_investment.NAV (proxy)",
+              "nativeQueryRef": "NAV (proxy)"
             },
             {
               "field": {
@@ -51,11 +65,11 @@
                       "Entity": "gold_fact_investment"
                     }
                   },
-                  "Property": "Sector Concentration %"
+                  "Property": "IRR (proxy)"
                 }
               },
-              "queryRef": "gold_fact_investment.Sector Concentration %",
-              "nativeQueryRef": "Sector Concentration %"
+              "queryRef": "gold_fact_investment.IRR (proxy)",
+              "nativeQueryRef": "IRR (proxy)"
             }
           ]
         }
@@ -70,56 +84,49 @@
                     "Entity": "gold_fact_investment"
                   }
                 },
-                "Property": "Sector Concentration %"
+                "Property": "Total Invested"
               }
             },
             "direction": "Descending"
           }
-        ]
+        ],
+        "isDefaultSort": true
       }
-    },
-    "visualContainerObjects": {
-      "title": [
-        {
-          "properties": {
-            "show": {
-              "expr": {
-                "Literal": {
-                  "Value": "true"
-                }
-              }
-            },
-            "text": {
-              "expr": {
-                "Literal": {
-                  "Value": "'MOIC & Sector Concentration'"
-                }
-              }
-            }
-          }
-        }
-      ]
     },
     "drillFilterOtherVisuals": true
   },
   "filterConfig": {
     "filters": [
       {
-        "name": "7610088924f8dcc4fc9b",
+        "name": "ce90e43eee6ef0c7dc08",
         "field": {
-          "Column": {
+          "Measure": {
             "Expression": {
               "SourceRef": {
-                "Entity": "gold_dim_company"
+                "Entity": "gold_fact_investment"
               }
             },
-            "Property": "sector_group"
+            "Property": "Total Invested"
           }
         },
-        "type": "Categorical"
+        "type": "Advanced"
       },
       {
-        "name": "737bca51e251ba55459a",
+        "name": "90237d0ee0b18bb0be55",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "gold_fact_investment"
+              }
+            },
+            "Property": "NAV (proxy)"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "c88230e010ed60740319",
         "field": {
           "Measure": {
             "Expression": {
@@ -133,7 +140,7 @@
         "type": "Advanced"
       },
       {
-        "name": "ca7e40872fb9c6707b0d",
+        "name": "5064f3fac7a60939ce9e",
         "field": {
           "Measure": {
             "Expression": {
@@ -141,7 +148,7 @@
                 "Entity": "gold_fact_investment"
               }
             },
-            "Property": "Sector Concentration %"
+            "Property": "IRR (proxy)"
           }
         },
         "type": "Advanced"

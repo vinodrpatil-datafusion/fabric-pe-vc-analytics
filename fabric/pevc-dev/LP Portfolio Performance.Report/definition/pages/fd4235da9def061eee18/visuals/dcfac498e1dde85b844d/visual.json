@@ -1,19 +1,19 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.10.0/schema.json",
-  "name": "b46149684be283edcd07",
+  "name": "dcfac498e1dde85b844d",
   "position": {
-    "x": 374.36772692009311,
-    "y": 165.83397982932505,
-    "z": 1,
-    "height": 335.64003103180761,
-    "width": 409.12335143522108,
-    "tabOrder": 1
+    "x": 9.9301784328937153,
+    "y": 524.31342125678816,
+    "z": 3,
+    "height": 195.62451512800621,
+    "width": 347.55624515128005,
+    "tabOrder": 3
   },
   "visual": {
-    "visualType": "tableEx",
+    "visualType": "clusteredBarChart",
     "query": {
       "queryState": {
-        "Values": {
+        "Category": {
           "projections": [
             {
               "field": {
@@ -27,22 +27,13 @@
                 }
               },
               "queryRef": "gold_dim_company.sector_group",
-              "nativeQueryRef": "sector_group"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "gold_fact_investment"
-                    }
-                  },
-                  "Property": "MOIC"
-                }
-              },
-              "queryRef": "gold_fact_investment.MOIC",
-              "nativeQueryRef": "MOIC"
-            },
+              "nativeQueryRef": "sector_group",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
             {
               "field": {
                 "Measure": {
@@ -75,24 +66,18 @@
             },
             "direction": "Descending"
           }
-        ]
+        ],
+        "isDefaultSort": true
       }
     },
     "visualContainerObjects": {
       "title": [
         {
           "properties": {
-            "show": {
-              "expr": {
-                "Literal": {
-                  "Value": "true"
-                }
-              }
-            },
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'MOIC & Sector Concentration'"
+                  "Value": "'Portfolio Concentration by Sector'"
                 }
               }
             }
@@ -105,7 +90,7 @@
   "filterConfig": {
     "filters": [
       {
-        "name": "7610088924f8dcc4fc9b",
+        "name": "d2529fbbcbe5461356fb",
         "field": {
           "Column": {
             "Expression": {
@@ -119,21 +104,7 @@
         "type": "Categorical"
       },
       {
-        "name": "737bca51e251ba55459a",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "gold_fact_investment"
-              }
-            },
-            "Property": "MOIC"
-          }
-        },
-        "type": "Advanced"
-      },
-      {
-        "name": "ca7e40872fb9c6707b0d",
+        "name": "df1493260fbd23dcf286",
         "field": {
           "Measure": {
             "Expression": {
