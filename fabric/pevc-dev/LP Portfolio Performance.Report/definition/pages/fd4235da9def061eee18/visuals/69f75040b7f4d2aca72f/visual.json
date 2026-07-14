@@ -22,13 +22,21 @@
                     "value": "Data Quality — Certified",
                     "textStyle": {
                       "fontWeight": "bold",
-                      "fontFamily": "-apple-system, \"system-ui\", Segoe UI, Roboto, sans-serif",
+                      "fontFamily": "Arial",
                       "fontSize": "16pt",
-                      "color": "#ffffff"
+                      "color": "#000000"
                     }
                   },
                   {
-                    "value": " Reconciliation: 1.000 / 1.000 match vs. synthetic conflict oracle (666/666 conflicts correctly resolved or flagged) Gold DQ assertions: 41/41 hard checks passed (1 documented WARN — known generator calibration noise, see SYNTHETIC_DATA.md) As of: notebook run 2026-07-14",
+                    "value": " Reconciliation: 1.000 / 1.000 match vs. synthetic conflict oracle (666/666 conflicts correctly resolved or flagged) Gold DQ assertions: 41/41 hard checks passed (1 documented WARN — known generator calibration noise, see SYNTHETIC_DATA.md) ",
+                    "textStyle": {
+                      "fontFamily": "Arial",
+                      "fontSize": "16pt",
+                      "color": "#000000"
+                    }
+                  },
+                  {
+                    "value": "As of: notebook run 2026-07-14",
                     "textStyle": {
                       "fontFamily": "-apple-system, \"system-ui\", Segoe UI, Roboto, sans-serif",
                       "fontSize": "16pt",
