@@ -323,6 +323,44 @@ an independent, unvalidated source.
   retrieval legs, the routing agent, and the evaluation harness are not yet built.
   Status here is architecture-committed, not build-complete.
 
+**Revision 2026-07-15 — pre-gate resolved; structured leg re-platformed off native
+Fabric Data Agent.**
+
+**Fabric Data Agent: blocked on trial capacity**, confirmed in-tenant — the item-
+creation dialog returns *"Can't create data agents in this workspace: An admin needs
+to change the SKU type for your organization's Fabric capacity."* The 64-capacity-unit
+trial numerically matches F64 but is gated by SKU *type* (trial vs. purchased), not
+capacity units, for this specific feature.
+
+**Foundry IQ: confirmed available**, independent of Fabric capacity — Azure AI Foundry
+is an Azure-subscription resource (project `datafusion-ai-agents-pr` already exists and
+is active), not gated the same way as native Fabric items. WS5's document-retrieval
+agent is a new, separate agent within that project, unrelated to agents already there.
+
+**Revised choice for the structured leg:** built as a custom function-calling agent
+rather than the native Fabric Data Agent item — an LLM with a defined tool that runs a
+parameterized query against `pevc-semantic-model` (XMLA/DAX endpoint) or the Gold
+Lakehouse SQL analytics endpoint, returning structured results for narration. Same
+deterministic-core, single-pipeline pattern already proven in the sibling [AI Business
+Analyst Agent](https://github.com/vinodrpatil-datafusion/ai-business-analyst-agent)
+repo — reused rather than invented fresh, and keeps the routing/evaluation separation
+DD-13 already committed to (per-leg groundedness scoring, not a blended number) intact
+regardless of which implementation sits behind the structured leg.
+
+**Unstructured leg unaffected** — proceeds as originally designed, on Foundry IQ.
+
+**Corpus-generation method: templated, not LLM-seeded.** Python string templates with
+variable slots filled from the existing canonical generator data (fund names, amounts,
+dates, companies) — the same deterministic approach as every other entity in
+`data-generator/`. Preserves `seed=42` reproducibility with no new infrastructure, no
+LLM-call cost, and no cache-management burden. Trade-off accepted: documents will read
+as clearly template-generated (repetitive phrasing across documents) rather than varied
+literary prose — consistent with this repo's existing stance that synthetic-data
+honesty (documented limitations, `SYNTHETIC_DATA.md`) beats surface polish.
+
+**Status:** all WS5 pre-gate items resolved 2026-07-15. Ready to start Stage A
+(extend `data-generator/` with the LP-document module).
+
 ---
 
 ## DD-14. Single Fabric workspace at trial scope; workspace separation deferred
@@ -523,4 +561,4 @@ and is the doc to update when a measure changes — not this entry.
 
 ---
 
-*Last updated: 2026-07-14. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
+*Last updated: 2026-07-15. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
