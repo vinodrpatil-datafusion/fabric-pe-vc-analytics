@@ -16,6 +16,21 @@ and `dim_date`.
 
 ---
 
+## Vantage point: an LP lens, not an LP position model
+
+The report is framed from the LP's seat, but the model contains **no LP entity** —
+no commitments, capital calls, distributions, or LP ownership shares
+([`data_model.md`](data_model.md) defers LP relationships as a future extension).
+The fact grain is **fund → company** deployments. The measures therefore read the
+full investment universe as a **single consolidated portfolio** — the implicit
+viewer is an allocator with exposure to every fund in scope (a fund-of-funds view),
+not one LP's pro-rata position. "Invested capital" throughout this document means
+the funds' deployed capital, not any LP's paid-in capital. Adding the
+commitment-and-cash-flow layer is the same extension that would unlock DPI, TVPI,
+and a true money-weighted IRR (see the DPI section below).
+
+---
+
 ## Naming note: "5 core measures" vs. 7 defined measures
 
 The README describes "5 core measures (MOIC, IRR proxy, NAV proxy, sector
@@ -85,8 +100,9 @@ concentration, vintage performance)". Precisely:
 
 ### Sector Concentration %
 
-- **LP meaning:** the LP's risk question — what share of *my deployed capital* sits
-  in each sector. Not a GP allocation view.
+- **LP meaning:** the LP's risk question — what share of the deployed capital sits
+  in each sector. Not a GP allocation view. (Per the vantage-point note above:
+  "deployed capital" is the consolidated fund universe, not an LP's pro-rata share.)
 - **Definition:** `DIVIDE([Total Invested], CALCULATE([Total Invested],
   ALL(gold_dim_company[sector_group])))`
 - **Valid grain:** designed for slicing by `dim_company[sector_group]` (the derived
@@ -143,8 +159,9 @@ with MOIC ("MOIC is paper, DPI is real") — is **not** in this model, deliberat
 
 **When you'd add it:** if the synthetic generator is extended to emit dated
 distribution/capital-call events, DPI (and RVPI, TVPI, and a true XIRR) become
-computable honestly. That extension is the natural precondition, and would warrant
-its own design decision.
+computable honestly. This is the same commitment-and-cash-flow layer named in the
+vantage-point note above — one extension, two payoffs: true LP-position attribution
+and the realised-return metric family. It would warrant its own design decision.
 
 ---
 
