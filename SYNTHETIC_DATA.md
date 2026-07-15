@@ -17,7 +17,7 @@ single workspace; `ws-ingestion-dev` is the documented production-target name):
 |---|---|---|
 | `landing/dealroom/` | External vendor (DealRoom-shaped) | companies, funding_rounds, investors, investments |
 | `landing/capitaliq/` | External vendor (Capital IQ-shaped) | companies, funding_rounds, investors, investments |
-| `landing/internal/` | The firm's own systems | people, deals (pipeline), documents |
+| `landing/internal/` | The firm's own systems | people, deals (pipeline), documents, lp_documents, lp_document_manifest |
 
 Plus `reference/`:
 - `vendor_id_mapping` — canonical ID ↔ {source, vendor_id}, per `architecture.md` §4. Entity resolution is treated as already solved (a maintained mapping table); WS2 reconciliation focuses on *attribute* conflicts, not fuzzy matching. **Explicit simplification.**
@@ -49,6 +49,26 @@ Rates are tunable in `pevc_generator/reference.py` (`SOURCE_PROFILES`).
 3. **Entity resolution is assumed solved** via `vendor_id_mapping`. Real platforms must fuzzy-match across vendors. Documented as out of scope, consistent with `architecture.md` §4.
 4. **A small number of funding rounds close before their company's `founded_date`** (~7% of rounds in the `seed=42`/`small` sample) — an uncorrelated-draw artifact between `canonical.py`'s company and round generation, not intentional test data. Downstream, WS3's Gold `fact_investment` cannot resolve a point-in-time `dim_company` version for the affected investments; its Stage E DQ check treats this as a soft `WARN`, not a hard failure — see `notebooks/05_gold_star_schema.ipynb` §8.
 
+## LP document corpus (WS5 Stage A, DD-17)
+
+`lp_documents` + `lp_document_manifest` (`data_model.md` §1.9–1.10) are the document
+universe WS5's Foundry IQ leg indexes: quarterly letters, capital call notices, and
+exit-notice memos. **Templated, not LLM-generated** (DD-13/DD-17 revision) — every
+document is built from canonical ground truth already in `canonical.py`, so every fact
+stated in one (an amount, a round type, an exit multiple) traces to a real underlying
+row. No fabricated numeric precision, same discipline DD-16 applies to the IRR proxy.
+
+Scoped to fund-type investors only (`investors.vintage_year` populated) — angels,
+accelerators, and strategics don't raise from LPs. Volume derives organically from
+each fund's actual investments (one capital call per participation, one memo per exit,
+up to `MAX_LETTER_QUARTERS` trailing quarterly letters per fund) rather than a fixed
+scale-profile count — see `pevc_generator/lp_documents.py`.
+
+`lp_document_manifest` is the citation ground truth for Stage E's evaluation harness:
+one row per `(document, entity_type, entity_id)` reference, so a retrieval agent's
+cited entities can be checked against what a document actually references.
+`validate_output.py` asserts every manifest reference resolves to ground truth.
+
 ## Bitemporal boundary
 
 The landing feeds carry only **source-reported** dates (`founded_date`, `announced_date`, `created_date`) and raw ingestion metadata (`_ingestion_ts`, `_batch_id`, …). The bitemporal columns specified in `data_model.md` — `effective_date`, `ingestion_date`, `source_attribution`, `reconciliation_status` — are assigned by the conformed **Stage C** load (WS2), **not** by this generator. This is deliberate: landing is raw (`architecture.md` §2.1).
@@ -58,7 +78,7 @@ The landing feeds carry only **source-reported** dates (`founded_date`, `announc
 ## Entities NOT generated here
 
 - `reconciliation_log` — an **output** of WS2 `02_reconciliation.py`, not a source feed.
-- LP relationships, fund-level TVPI/IRR — explicitly out of scope per `data_model.md` §5 (LP deferred; fund performance lives in the semantic model).
+- LP relationships, fund-level TVPI/IRR — explicitly out of scope per `data_model.md` §5 (LP deferred; fund performance lives in the semantic model). `lp_documents` (below) are a fund's own communications *addressed to* its LPs — no named LP entity or ownership share behind them, so this remains true.
 
 ## Landing metadata columns
 

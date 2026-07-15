@@ -177,6 +177,31 @@ Cross-cutting audit table.
 
 **Modelling rationale:** The reconciliation log makes data quality work visible and auditable. When an analyst asks "why does our platform show $50M raised when DealRoom shows $45M", the answer is in this log, not buried in pipeline code.
 
+### 1.9 LP documents
+
+Fund-to-LP communications: quarterly letters, capital call notices, and exit-notice memos. Kept separate from `documents` (§1.7) — different purpose (LP communications, not deal-pipeline records) and a different sensitivity profile (DD-17).
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `lp_document_id` | string | e.g. `LPD-000001`. |
+| `document_type` | string | `quarterly_letter`, `capital_call_notice`, `memo`. |
+| `investor_id` | string | FK to investors — the fund authoring/sending it. |
+| `effective_date` | date | Quarter-end for letters, call/exit date otherwise. |
+| `ingestion_date` | timestamp | |
+| `body_text` | string | Templated prose — no LLM generation, no fabricated numeric precision. |
+
+**Modelling rationale:** scoped to fund-type investors only (`investors.vintage_year` populated) — angels, accelerators, and strategics don't raise from LPs, so it wouldn't make sense for them to issue capital calls or LP letters. Generated directly from canonical ground truth (an investment's `participation_amount`, a round's `round_type`, an exit's `realised_return_multiple`), so every fact stated in a document is traceable to a real underlying row, not invented.
+
+### 1.10 LP document manifest
+
+Citation ground truth for `lp_documents` — flattens each document's cross-references into one row per reference, rather than array columns, so Stage E's evaluation harness can score retrieval citations against individual entity IDs across heterogeneous types.
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `lp_document_id` | string | FK to `lp_documents`. |
+| `entity_type` | string | `investor`, `company`, `round`. |
+| `entity_id` | string | The referenced entity's natural key. |
+
 ---
 
 ## 2. Relationship density
@@ -233,7 +258,7 @@ Internal identity (the `_id` columns) is decoupled from any vendor identity. Ven
 
 Calling out gaps:
 
-- **Limited Partner (LP) relationships** — Fund-to-LP relationships are valuable but rarely disclosed at sufficient quality for an analytics platform. Modelled as a future extension.
+- **Limited Partner (LP) relationships** — Fund-to-LP relationships are valuable but rarely disclosed at sufficient quality for an analytics platform. Modelled as a future extension. Note this is distinct from the `lp_documents` entity (§1.9): those are a fund's own communications *addressed to* its LPs, with no named LP entity or ownership share behind them — see `measures.md`'s vantage-point note for the same distinction on the measures side.
 - **Detailed deal terms** — Preferences, liquidation stacks, anti-dilution provisions are not modelled at the level a legal review would require. The platform focuses on capital flows and outcomes, not term mechanics.
 - **Public market data** — Public company stock prices, earnings, analyst estimates are out of scope for the platform's private market focus.
 - **Fund-level performance** — MOIC and an IRR proxy are computed in the semantic model (not pre-computed in the conformed layer) — see [`measures.md`](measures.md) for the definitions and `design_decisions.md` DD-16 for the IRR-proxy method. **TVPI and DPI are not built, deliberately**: the conformed layer models exits as a terminal `realised_return_multiple`, not dated distribution events, so a DPI would just be a duplicate of the realised share of NAV wearing a more credible-sounding name. `measures.md` names the precondition for adding them honestly (dated distribution/capital-call events in the generator).

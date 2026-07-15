@@ -5,7 +5,7 @@ Output tree:
   ├── landing/
   │   ├── dealroom/   companies, funding_rounds, investors, investments
   │   ├── capitaliq/  companies, funding_rounds, investors, investments
-  │   └── internal/   people, deals, documents
+  │   └── internal/   people, deals, documents, lp_documents, lp_document_manifest
   └── reference/
       ├── ground_truth_*  (oracle for reconciliation scoring; NOT a feed)
       └── vendor_id_mapping
@@ -31,6 +31,7 @@ from pevc_generator.conflicts import derive_expected_conflicts
 from pevc_generator.internal import generate_internal
 from pevc_generator.io_utils import OUTPUT_EXT, write_table
 from pevc_generator.lineage import attach_landing_lineage
+from pevc_generator.lp_documents import generate_lp_documents
 from pevc_generator.sources import project_sources
 
 # JSON-serialized (nested) columns per entity
@@ -63,16 +64,19 @@ def main() -> int:
 
     print(f"[generator v2] scale={profile.name} seed={args.seed} format={OUTPUT_EXT} batch={ctx.batch_id[:8]}")
 
-    print("[1/4] canonical ground truth…")
+    print("[1/5] canonical ground truth…")
     canonical = generate_canonical(profile, rng)
 
-    print("[2/4] projecting source feeds with conflicts…")
+    print("[2/5] projecting source feeds with conflicts…")
     feeds = project_sources(canonical, rng)
 
-    print("[3/4] internal feed (deals, documents, people)…")
+    print("[3/5] internal feed (deals, documents, people)…")
     internal = generate_internal(canonical, profile, rng)
 
-    print(f"[4/4] writing to {args.output.resolve()}")
+    print("[4/5] LP document corpus…")
+    lp_docs = generate_lp_documents(canonical, rng)
+
+    print(f"[5/5] writing to {args.output.resolve()}")
     landing = args.output / "landing"
     reference = args.output / "reference"
 
@@ -90,6 +94,15 @@ def main() -> int:
     for entity in ("people", "deals", "documents"):
         rows = internal[entity] if entity in internal else canonical[entity]
         df = pd.DataFrame(rows)
+        df = attach_landing_lineage(df, ctx, source_system=R.SOURCE_INTERNAL, source_file=f"{entity}.{OUTPUT_EXT}")
+        p = write_table(df, landing / "internal", entity, json_cols=JSON_COLS.get(entity))
+        total += p.stat().st_size
+        print(f"  landing/internal/{entity:14s} rows={len(df):>6,d}")
+
+    # LP document corpus (DD-17) -- also internal source: the firm's own record
+    # of what was sent to LPs, not a third-party feed.
+    for entity in ("lp_documents", "lp_document_manifest"):
+        df = pd.DataFrame(lp_docs[entity])
         df = attach_landing_lineage(df, ctx, source_system=R.SOURCE_INTERNAL, source_file=f"{entity}.{OUTPUT_EXT}")
         p = write_table(df, landing / "internal", entity, json_cols=JSON_COLS.get(entity))
         total += p.stat().st_size

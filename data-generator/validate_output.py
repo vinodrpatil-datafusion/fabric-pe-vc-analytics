@@ -71,6 +71,29 @@ print("PASS: landing lineage columns present and source-stamped")
 
 print()
 print("=" * 72)
+print("LP DOCUMENT CORPUS (DD-17)")
+print("=" * 72)
+
+lp_docs = load("internal", "lp_documents")
+lp_manifest = load("internal", "lp_document_manifest")
+
+resolvers = {"investor": gt_iv, "company": gt_co, "round": gt_rd}
+unresolved = 0
+for etype, ids in resolvers.items():
+    rows = lp_manifest[lp_manifest.entity_type == etype]
+    bad = set(rows["entity_id"]) - ids
+    unresolved += len(rows[rows["entity_id"].isin(bad)])
+    if bad:
+        print(f"  UNRESOLVED {etype} refs: {sorted(bad)[:5]}{'...' if len(bad) > 5 else ''}")
+assert unresolved == 0, f"{unresolved} lp_document_manifest rows reference IDs absent from ground truth"
+print(f"PASS: all {len(lp_manifest)} lp_document_manifest rows resolve to ground truth "
+      f"({len(lp_docs)} documents: "
+      f"{(lp_docs.document_type == 'quarterly_letter').sum()} quarterly letters, "
+      f"{(lp_docs.document_type == 'capital_call_notice').sum()} capital call notices, "
+      f"{(lp_docs.document_type == 'memo').sum()} memos)")
+
+print()
+print("=" * 72)
 print("COVERAGE")
 print("=" * 72)
 n = len(gt_co)

@@ -21,7 +21,7 @@ sample-data/
 ├── landing/
 │   ├── dealroom/    companies funding_rounds investors investments
 │   ├── capitaliq/   companies funding_rounds investors investments
-│   └── internal/    people deals documents
+│   └── internal/    people deals documents lp_documents lp_document_manifest
 └── reference/
     ├── vendor_id_mapping        canonical_id <-> {source, vendor_id}
     └── ground_truth_*           reconciliation oracle (NOT a feed)
@@ -42,6 +42,8 @@ single workspace; `ws-ingestion-dev` is the documented production-target name).
 | deals | §1.6 | internal |
 | documents | §1.7 | internal |
 | reconciliation_log | §1.8 | **not generated** — WS2 output |
+| lp_documents | §1.9 | internal (templated from canonical ground truth, DD-17) |
+| lp_document_manifest | §1.10 | internal (citation ground truth for `lp_documents`) |
 
 ## Scale
 
@@ -50,6 +52,11 @@ single workspace; `ws-ingestion-dev` is the documented production-target name).
 | small | 200 | 120 | 400 | ~450 | ~1.2 MB |
 | medium | 800 | 350 | 1500 | ~1800 | ~5 MB |
 | large | 2500 | 900 | 4500 | ~5600 | ~16 MB |
+
+`lp_documents`/`lp_document_manifest` aren't a fixed scale count — they derive organically
+from fund-type investors' actual investments (one capital call notice per participation,
+one memo per exit, up to `MAX_LETTER_QUARTERS` quarterly letters per fund). At `small`,
+that's ~1,570 documents / ~5,350 manifest rows.
 
 ## Package layout
 
@@ -62,7 +69,8 @@ pevc_generator/
 ├── scale.py       small / medium / large
 ├── canonical.py   Ground-truth oracle (the 'real world')
 ├── sources.py     Project oracle -> per-source feeds with conflicts
-└── internal.py    Internal pipeline (deals) + documents
+├── internal.py    Internal pipeline (deals) + documents
+└── lp_documents.py LP document corpus: quarterly letters, capital calls, memos (DD-17)
 ```
 
 ## Tuning conflicts
