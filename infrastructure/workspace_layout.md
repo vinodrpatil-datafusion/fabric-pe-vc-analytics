@@ -34,8 +34,9 @@ workspace. Separation is by item (lakehouse, notebook), not by workspace.
   `04_data_quality_assertions`, `05_gold_star_schema` — the conformed + Gold build (see
   [`../notebooks/README.md`](../notebooks/README.md)).
 - Semantic Model (DirectLake): `pevc-semantic-model` — over the 4 Gold tables, 5 core
-  measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage
-  performance).
+  LP measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage
+  performance) plus 2 supporting DAX measures; contract in
+  [`../docs/measures.md`](../docs/measures.md).
 - Report: `LP Portfolio Performance` — Power BI report consuming the semantic model.
 
 **Items (planned, land in the same workspace per DD-14):**
@@ -196,4 +197,4 @@ Promotion across Dev → Test → Prod is via Fabric deployment pipelines. See [
 
 ---
 
-*Last updated: 2026-07-14. Layout reflects portfolio implementation (DD-14); production sizing and workspace-split notes are target-design guidance, not built.*
+*Last updated: 2026-07-15. Layout reflects portfolio implementation (DD-14); production sizing and workspace-split notes are target-design guidance, not built.*

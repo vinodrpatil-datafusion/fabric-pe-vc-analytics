@@ -94,8 +94,10 @@ generate — see DD-05 for the "when you'd add it back" case.
 **Why DirectLake:** Eliminates import refresh cycles, reads Delta directly, sub-second performance at semantic-model scale. The semantic model is the version-of-truth for measures and hierarchies; analysts consume through Power BI without parallel datasets drifting from source.
 
 **Contents:**
-- `investment_analytics.bim` semantic model
-- DAX measures encoding institutional definitions (IRR, MOIC, vintage cohorts)
+- `pevc-semantic-model` (DirectLake semantic model, built — as-built name differs from
+  the `investment_analytics.bim` placeholder used earlier in this doc's drafting)
+- DAX measures encoding institutional definitions (IRR proxy, MOIC, vintage cohorts) —
+  full contract, definitions, and caveats in [`measures.md`](measures.md)
 - Row-level security tied to workspace RBAC
 
 #### 2.3.3 AI serving — Azure OpenAI integration layer

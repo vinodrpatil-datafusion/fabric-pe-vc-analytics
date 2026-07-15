@@ -129,6 +129,8 @@ The domain model, DirectLake semantic model, and measure layer culminate in one 
 
 Every number on this page traces backward through a real lineage: landing feeds → Stage B reconciliation (conflict-flagged, not silently resolved) → Stage C bitemporal load → Gold star schema (point-in-time joined) → DirectLake semantic model. Nothing here is a spreadsheet formula sitting on top of a CSV.
 
+For the precise definition, valid grain, and caveats behind every number on this page — including why DPI is deliberately not one of them — see [`docs/measures.md`](docs/measures.md), the measure contract.
+
 ## AI layer
 
 Azure OpenAI is integrated against the conformed Delta layer, not the raw ingestion layer. The principle: the LLM reasons over validated, reconciled, source-attributed data — never over raw feeds.
@@ -154,6 +156,7 @@ fabric-pe-vc-analytics/
 │   ├── architecture.md           Full architecture document
 │   ├── design_decisions.md       Decision log with rationale
 │   ├── data_model.md             Domain schema and modelling rationale
+│   ├── measures.md                Measure contract for the semantic model (LP meaning, definitions, caveats)
 │   └── governance.md             RBAC, sensitivity, lineage approach
 ├── infrastructure/
 │   ├── workspace_layout.md       Fabric workspace structure
@@ -184,7 +187,7 @@ fabric-pe-vc-analytics/
 | Workspace/domain setup | ✅ Complete (as-built ≠ target) | Single workspace `pevc-dev` under the `Investment Analytics` domain (DD-14); the documented workspace-per-layer target (DD-10) isn't provisioned |
 | Conformed Delta build with bitemporal modelling | ✅ Complete | 4-stage pipeline (`notebooks/`); reconciliation scored 1.000/1.000 against synthetic conflict oracle |
 | Gold star schema (Lakehouse Delta) | ✅ Complete | Grain per DD-15; `notebooks/05_gold_star_schema.ipynb` executed and certified against the live `pevc-dev` tenant |
-| DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, all 5 core measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) |
+| DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, 5 core LP measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) plus 2 supporting DAX measures; full contract in [`docs/measures.md`](docs/measures.md) |
 | Power BI report | ✅ Complete | `LP Portfolio Performance` — KPI cards, vintage/sector tables, sector-concentration chart, DirectLake-connected |
 | Git integration (Fabric ↔ GitHub) | ✅ Complete | `pevc-dev` workspace connected to this repo, folder `fabric/pevc-dev/` |
 | Azure OpenAI integration layer | 📐 Designed | Fusion agent pattern committed in `docs/design_decisions.md` DD-13; not yet built |

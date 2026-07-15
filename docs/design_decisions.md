@@ -515,6 +515,12 @@ platform's consumer perspective — specifically expect to see when assessing fu
 performance. A proxy with an explicit, visible caveat serves that audience better than
 omission.
 
+**Living contract:** this and DD-15's NAV-proxy convention are the rationale; the
+maintained, implementation-checked definition of every measure (including the two
+supporting measures added since, `Cost-Weighted Avg Years Held` and `Cumulative NAV
+(proxy)`) lives in [`measures.md`](measures.md), which is kept in sync with the TMDL
+and is the doc to update when a measure changes — not this entry.
+
 ---
 
 *Last updated: 2026-07-14. New decisions are appended; existing decisions are updated in place with revision notes when changed.*

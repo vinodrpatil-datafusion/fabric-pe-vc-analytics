@@ -236,7 +236,7 @@ Calling out gaps:
 - **Limited Partner (LP) relationships** — Fund-to-LP relationships are valuable but rarely disclosed at sufficient quality for an analytics platform. Modelled as a future extension.
 - **Detailed deal terms** — Preferences, liquidation stacks, anti-dilution provisions are not modelled at the level a legal review would require. The platform focuses on capital flows and outcomes, not term mechanics.
 - **Public market data** — Public company stock prices, earnings, analyst estimates are out of scope for the platform's private market focus.
-- **Fund-level performance** — Fund IRR, TVPI, DPI calculations are derivable from investments but not pre-computed in the conformed layer. They sit in the semantic model where the institutional definitions live.
+- **Fund-level performance** — MOIC and an IRR proxy are computed in the semantic model (not pre-computed in the conformed layer) — see [`measures.md`](measures.md) for the definitions and `design_decisions.md` DD-16 for the IRR-proxy method. **TVPI and DPI are not built, deliberately**: the conformed layer models exits as a terminal `realised_return_multiple`, not dated distribution events, so a DPI would just be a duplicate of the realised share of NAV wearing a more credible-sounding name. `measures.md` names the precondition for adding them honestly (dated distribution/capital-call events in the generator).
 
 ---
 
