@@ -561,4 +561,73 @@ and is the doc to update when a measure changes — not this entry.
 
 ---
 
+## DD-17. LP document corpus schema (WS5 Stage A)
+
+**Status:** Accepted 2026-07-15 (proposed and confirmed with the maintainer before any
+generator code was written, per the same record-before-code protocol as DD-15/DD-16).
+
+**Choice:** a new entity, `lp_documents`, separate from the existing internal
+`documents` entity (`data_model.md` §1.7 — deal-pipeline memos, transcripts, news), plus
+a new manifest table `lp_document_manifest` flattening each document's cross-references
+into queryable rows.
+
+**`lp_documents` fields:** `lp_document_id` (PK, e.g. `LPD-000001`), `document_type`
+(`quarterly_letter` | `capital_call_notice` | `memo`), `investor_id` (FK — the fund
+authoring/sending it), `effective_date` (quarter-end for letters, call date for capital
+calls), `body_text` (templated prose), plus the standard `_`-prefixed lineage columns
+every landing entity carries.
+
+**`lp_document_manifest` fields:** one row per `(lp_document_id, entity_type,
+entity_id)` reference — `entity_type` is `investor` | `company` | `round`. This is the
+citation ground truth Stage E's evaluation harness scores retrieval against later
+(did the agent's cited entity IDs match what the document actually references).
+
+**Why a separate entity, not an extension of `documents`:** different purpose (fund→LP
+communications vs. internal deal-pipeline records) and a different sensitivity profile
+— conflating them would blur both, and `CLAUDE.md` already flags internal `documents`
+as the platform's most sensitive entity class, which LP quarterly letters and capital
+call notices are not the same thing as.
+
+**Why a manifest table, not array columns on `lp_documents` (as the existing
+`documents.subject_company_ids` pattern does):** citation-accuracy scoring in Stage E
+needs to check individual entity references across heterogeneous types (investor,
+company, round) per document. A flattened join table is directly queryable for that;
+an array column mixing three entity-type namespaces would need parsing and type-tagging
+at evaluation time instead of at generation time.
+
+**What triggers each document type — no fabricated precision, only what the generator
+already knows from `canonical.py`:**
+- **Quarterly letter** — one per fund per quarter, from that fund's `vintage_year`
+  through `TODAY`, referencing 2–4 of its actual portfolio companies. Commentary stays
+  qualitative ("N portfolio companies, M new investments this quarter") — no invented
+  IRR/MOIC figures. This mirrors the same discipline DD-16 already applies to the IRR
+  proxy: a labelled approximation beats manufactured-looking precision.
+- **Capital call notice** — one per `(investor, round)` participation, referencing
+  `investor_id` + `round_id` + `company_id`; amount matches that investment's
+  `participation_amount`; due date sits near the round's close.
+- **Memo** — ad-hoc fund communications: new-investment announcements and exit notices
+  (using `exit_date`/`exit_type`/`realised_return_multiple` where populated),
+  referencing `investor_id` + `company_id` + `round_id`.
+
+**Generation method:** templated (DD-13 revision, 2026-07-15) — Python string templates
+filled from canonical ground-truth data, not LLM-generated prose. Preserves `seed=42`
+reproducibility with no new infrastructure; accepted trade-off is that documents read
+as clearly template-generated rather than varied literary prose.
+
+**Mechanics:** new module `data-generator/pevc_generator/lp_documents.py`, wired into
+`generate.py`'s existing pipeline. Output lands at
+`sample-data/landing/internal/lp_documents.parquet` and
+`sample-data/landing/internal/lp_document_manifest.parquet` — same `internal` source
+convention as `people`/`deals`/`documents`. `validate_output.py` gains a new check:
+every `entity_id` in the manifest resolves against ground truth (companies, investors,
+rounds) — mirroring the existing `vendor_id_mapping` resolution checks already run for
+the other entities.
+
+**Rejected: extending `documents` with new `document_type` values instead of a new
+entity.** Would have reused existing infrastructure, but bakes the sensitivity/purpose
+conflation described above into the schema permanently rather than just for this
+generation pass — harder to walk back later than building it separately now.
+
+---
+
 *Last updated: 2026-07-15. New decisions are appended; existing decisions are updated in place with revision notes when changed.*
