@@ -163,6 +163,7 @@ fabric-pe-vc-analytics/
 │   └── deployment_pipelines.md   CI/CD approach (in progress)
 ├── data-generator/                Python package producing synthetic landing feeds
 ├── sample-data/                   Committed generator output (seed=42, scale=small)
+├── ai-integration/                 WS5 fusion agent — Foundry IQ indexing, structured-retrieval agent
 ├── notebooks/
 │   ├── README.md                        Stage map, reconciliation policy, run instructions
 │   ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
@@ -190,7 +191,7 @@ fabric-pe-vc-analytics/
 | DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, 5 core LP measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) plus 2 supporting DAX measures; full contract in [`docs/measures.md`](docs/measures.md) |
 | Power BI report | ✅ Complete | `LP Portfolio Performance` — KPI cards, vintage/sector tables, sector-concentration chart, DirectLake-connected |
 | Git integration (Fabric ↔ GitHub) | ✅ Complete | `pevc-dev` workspace connected to this repo, folder `fabric/pevc-dev/` |
-| Azure OpenAI integration layer | 📐 Designed | Fusion agent pattern committed in `docs/design_decisions.md` DD-13; not yet built |
+| AI integration (fusion agent, WS5) | 🔨 In progress | Pattern in DD-13 (`ai-integration/`); Stage A (LP document corpus, DD-17) complete, Stage B (Foundry IQ indexing) written |
 | Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Git integration is live, Dev/Test/Prod promotion pipelines are not |
 | Microsoft Purview lineage integration | 📐 Designed, not implemented | Governance model assumes Purview (see `docs/governance.md`); not wired up in the trial tenant |
 
