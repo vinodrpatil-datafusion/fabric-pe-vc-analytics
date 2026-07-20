@@ -13,7 +13,7 @@ the structured leg is a custom function-calling agent instead, not the native it
 |---|---|---|
 | A | Synthetic LP document corpus (`data-generator/pevc_generator/lp_documents.py`) | Complete — see DD-17 |
 | B | Index the corpus in Azure AI Foundry (`index_corpus.py`) | Complete — 1,568/1,568 files verified completed, 0 failed (`verify_corpus.py`) |
-| C | Custom function-calling agent over the Gold schema | Not started |
+| C | Custom function-calling agent over the Gold schema (`structured_agent.py`) | Complete — validated against live `pevc-semantic-model` across single-measure, sector-filtered, and multi-step comparison questions |
 | D | Fusion agent — routes structured / document / hybrid questions to both legs | Not started |
 | E | Evaluation harness — groundedness + citation-accuracy, scored per leg | Not started |
 
@@ -27,6 +27,7 @@ python index_corpus.py    # Stage B
 python verify_corpus.py   # confirm live per-file status directly via the API --
                           # the Foundry portal's "Failed files" card can show
                           # stale/orphaned counts (see index_corpus.py's docstring)
+python structured_agent.py "What's the MOIC for the 2022 vintage?"   # Stage C
 ```
 
 `.env` is git-ignored — never commit real endpoints/keys, same placeholder discipline
@@ -92,6 +93,44 @@ project**, in case they resurface:
   which would create duplicates for the ones already completed. Delete the
   vector store in the portal first if you want a clean rebuild rather than
   rerunning on top of a partial one.
+
+## How `structured_agent.py` works
+
+Answers NL2metric questions (MOIC, IRR proxy, NAV proxy, sector concentration,
+vintage performance) over `pevc-semantic-model` — the structured leg of the
+fusion agent (DD-13, re-platformed off the native Fabric Data Agent per its
+2026-07-15 revision, since that's blocked on trial capacity).
+
+**Deterministic-core, LLM-picks-not-writes.** One tool function per
+`docs/measures.md` entry, each backed by a fixed, parameterized DAX query.
+The LLM never writes DAX itself — it only selects a tool and fills
+`vintage_year`/`sector_group`/`as_of_date` arguments. `sector_group` is
+constrained to a live-fetched JSON Schema `enum` (queried once at startup via
+`VALUES(gold_dim_company[sector_group])`), not a hardcoded list — the
+generator's full taxonomy has 8 groups but which ones actually have companies
+at a given seed/scale varies, and a guessed static list let the model pick
+plausible-sounding wrong values (`'Tech'`, `'FinTech'`) that silently
+returned empty results indistinguishable from a genuinely blank measure.
+
+**Multi-step tool-calling loop**, not a single round-trip: a question like
+"which sector performed best" needs `get_sector_concentration` (to learn
+which sectors exist) *then* `get_moic`/`get_irr_proxy` per sector before any
+final text answer — capped at `MAX_TOOL_ROUNDS` (6) to avoid a runaway loop.
+
+**Two resources, one identity.** The LLM call (Azure AI Foundry) and the DAX
+query (Fabric/Power BI `executeQueries`) are different resources that
+initially needed two different accounts — confirmed by hitting a real 403
+testing cross-identity access. Once one account has RBAC on both (Fabric
+workspace access *and* the Foundry resource's "Cognitive Services OpenAI
+User" role — the latter is a separate grant from whatever role already
+allowed `index_corpus.py`'s vector-store calls to work, and in this project
+turned out to need adding at *both* the Azure IAM level and a project-level
+Foundry "Users"/Management Center list, two distinct permission surfaces),
+one `InteractiveBrowserCredential` requests tokens for both scopes. Set
+`STRUCTURED_AGENT_LOGIN_HINT` in `.env` to that account — never hardcode a
+real account name in this script or its docs, only in the git-ignored `.env`.
+Token caching is persistent (macOS Keychain via `TokenCachePersistenceOptions`),
+so the browser prompt appears once, not on every run.
 
 ## Why a separate folder from `data-generator/`
 

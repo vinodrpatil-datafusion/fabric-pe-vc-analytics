@@ -3,3 +3,5 @@ azure-identity
 python-dotenv
 pandas
 pyarrow
+requests
+keyring
