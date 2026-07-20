@@ -473,6 +473,10 @@ gold_dim_company.filter(F.col("company_id") == sample_company_id) \
 # **WS4** (DirectLake semantic model, S2) reads these four Gold tables and defines the
 # five core LP measures on top of them.
 
+# MARKDOWN ********************
+
+# **Testing**
+
 # CELL ********************
 
 spark.read.table("gold_fact_investment").agg(
