@@ -266,6 +266,41 @@ Git integration in Fabric reached production maturity in 2024-2025 and is the ri
 
 **Status:** In progress in the implementation. Design documented in [`../infrastructure/deployment_pipelines.md`](../infrastructure/deployment_pipelines.md).
 
+**Revision 2026-07-20 — implemented; one workspace per environment tier, not
+four/five per layer.**
+
+Built as three workspaces — `pevc-dev`, `pevc-test`, `pevc-prod` — one per
+environment tier, each holding the full item set rather than being split
+further by ingestion/conformed/serving layer. DD-14's single-workspace-at-
+trial-scope rationale (single maintainer, one identity, no governance
+boundary actually being enforced by extra workspace splits) applies at least
+as strongly across three environment tiers as it did across four layers
+within one tier — a workspace-per-layer-per-tier grid would have meant up to
+15 workspaces for a single-maintainer trial build.
+
+Linked via a Fabric deployment pipeline (`pevc-pipeline`, three stages:
+Development/Test/Production), confirmed working on the trial capacity —
+unlike the Fabric Data Agent block (DD-13's 2026-07-15 revision below), this
+feature is not gated by SKU type here. A pre-existing tutorial pipeline
+(`deploymentpipeline_lab`, three workspaces each holding a leftover
+`LabLakehouse`) confirmed the feature's availability before any real
+workspace was created — same "verify the platform capability before
+building around an assumption" move that caught the Data Agent block.
+
+Each workspace also keeps its own Git integration, connected to a
+same-named branch (`pevc-dev`↔`dev`, `pevc-test`↔`test`, `pevc-prod`↔`main`)
+at an **identical git folder path** (`/fabric/pevc/`) across all three
+branches — deliberately not environment-named per branch (`fabric/pevc-dev/`,
+`fabric/pevc-test/`, ...). Promotion between environments happens via branch
+merge (PR: `dev` → `test` → `main`); a matching path across branches is what
+lets `git diff dev main -- fabric/pevc/` show exactly what a promotion would
+change. An environment-named path per branch would need renaming as part of
+every merge, fighting how git merges actually work.
+
+**Status:** Implemented at portfolio scope — Git integration and the
+deployment pipeline are both live across all three environments. First
+actual content promotion (Dev → Test) not yet exercised.
+
 ---
 
 ## DD-13. Foundry-composed fusion agent for AI integration (WS5 Option B)
