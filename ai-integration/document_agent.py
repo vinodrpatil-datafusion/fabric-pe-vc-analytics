@@ -26,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -54,10 +55,19 @@ SYSTEM_PROMPT = (
 )
 
 
-def answer_document(openai_client: Any, deployment: str, vector_store_id: str, question: str) -> str:
+@dataclass
+class DocumentAnswer:
+    text: str
+    cited_lp_document_ids: set[str]
+
+
+def answer_document_full(openai_client: Any, deployment: str, vector_store_id: str, question: str) -> DocumentAnswer:
     """Runs one Responses API call with the built-in file_search tool and
-    returns the narrated, citation-grounded answer. Raises RuntimeError if
-    the model returns no text."""
+    returns the narrated answer plus which lp_document_ids were formally
+    cited (via file_citation annotations). Raises RuntimeError if the model
+    returns no text. This is the one place that parses response.output --
+    answer_document() and evaluate_agents.py's citation-accuracy scoring both
+    go through here rather than each re-implementing the parsing."""
     response = call_with_retry(
         openai_client.responses.create,
         model=deployment,
@@ -87,7 +97,13 @@ def answer_document(openai_client: Any, deployment: str, vector_store_id: str, q
 
     if not response.output_text:
         raise RuntimeError("Model returned an empty response for the document leg.")
-    return response.output_text
+    return DocumentAnswer(text=response.output_text, cited_lp_document_ids=doc_ids)
+
+
+def answer_document(openai_client: Any, deployment: str, vector_store_id: str, question: str) -> str:
+    """Thin wrapper over answer_document_full() for callers (fusion_agent.py,
+    this module's own main()) that only need the narrated text."""
+    return answer_document_full(openai_client, deployment, vector_store_id, question).text
 
 
 def main() -> int:

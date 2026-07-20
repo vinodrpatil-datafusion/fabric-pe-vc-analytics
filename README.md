@@ -2,7 +2,7 @@
 
 > A reference architecture and working portfolio project for institutional private equity and venture capital analytics, built on Microsoft Fabric.
 
-**Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration and deployment pipelines remain in progress.
+**Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration (WS5, fusion agent) complete and validated against live data. Deployment pipelines remain in progress.
 **Author:** Vinod Patil — Lead Data & AI Engineer ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
@@ -191,7 +191,7 @@ fabric-pe-vc-analytics/
 | DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, 5 core LP measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) plus 2 supporting DAX measures; full contract in [`docs/measures.md`](docs/measures.md) |
 | Power BI report | ✅ Complete | `LP Portfolio Performance` — KPI cards, vintage/sector tables, sector-concentration chart, DirectLake-connected |
 | Git integration (Fabric ↔ GitHub) | ✅ Complete | `pevc-dev` workspace connected to this repo, folder `fabric/pevc-dev/` |
-| AI integration (fusion agent, WS5) | 🔨 In progress | Pattern in DD-13 (`ai-integration/`); Stage A (LP document corpus, DD-17) complete, Stage B (Foundry IQ indexing) written |
+| AI integration (fusion agent, WS5) | ✅ Complete | Pattern in DD-13 (`ai-integration/`); Stages A–E all complete and validated against live data — corpus generation, Foundry indexing, structured + document retrieval legs, routing/fusion, and an oracle-based evaluation harness (structured leg 6/6 grounded, document leg 5/6 with a documented citation-accuracy finding) |
 | Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Git integration is live, Dev/Test/Prod promotion pipelines are not |
 | Microsoft Purview lineage integration | 📐 Designed, not implemented | Governance model assumes Purview (see `docs/governance.md`); not wired up in the trial tenant |
 

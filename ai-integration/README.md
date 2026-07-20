@@ -15,7 +15,7 @@ the structured leg is a custom function-calling agent instead, not the native it
 | B | Index the corpus in Azure AI Foundry (`index_corpus.py`) | Complete — 1,568/1,568 files verified completed, 0 failed (`verify_corpus.py`) |
 | C | Custom function-calling agent over the Gold schema (`structured_agent.py`) | Complete — validated against live `pevc-semantic-model` across single-measure, sector-filtered, and multi-step comparison questions |
 | D | Fusion agent — routes structured / document / hybrid questions to both legs (`fusion_agent.py`) | Complete — structured/document/hybrid routing, both legs, and hybrid synthesis validated against live data |
-| E | Evaluation harness — groundedness + citation-accuracy, scored per leg | Not started |
+| E | Evaluation harness — groundedness + citation-accuracy, scored per leg (`evaluate_agents.py`) | Complete — structured leg 6/6 grounded; document leg 5/6 grounded, 5/6 citation-accuracy (see finding below) |
 
 ## Setup
 
@@ -30,6 +30,7 @@ python verify_corpus.py   # confirm live per-file status directly via the API --
 python structured_agent.py "What's the MOIC for the 2022 vintage?"   # Stage C
 python document_agent.py "What have LP letters said about portfolio risk?"   # Stage D leg
 python fusion_agent.py "How did FinTech perform, and what did LPs say about it?"   # Stage D
+python evaluate_agents.py   # Stage E
 ```
 
 `.env` is git-ignored — never commit real endpoints/keys, same placeholder discipline
@@ -199,6 +200,51 @@ not a blended one).
    other leg's answer is still returned with an explicit note about which
    leg failed, rather than the whole question failing or the gap being
    silently dropped (DD-13: report failure modes honestly).
+
+## How `evaluate_agents.py` works
+
+The evaluation harness (DD-13: groundedness + citation-accuracy, scored
+**per leg**, never blended into one number). **Oracle-based, not
+LLM-judged** — every LP document is templated from known canonical facts
+(`lp_documents.py`: "no LLM calls, no fabricated numeric precision"), and
+every DAX measure is independently re-derivable by just running the query.
+So instead of asking an LLM to judge whether an answer "seems grounded"
+(another non-deterministic layer on top of the thing being evaluated), this
+checks agent answers against values already known to be correct — same
+philosophy as WS2's reconciliation being scored against `expected_conflicts`
+(see `CLAUDE.md`).
+
+- **Structured leg**: 6 fixed (question, oracle DAX) cases spanning
+  different measures/filters. The oracle query runs independently of the
+  agent — bypassing its own tool-calling and narration — then the agent's
+  narrated text is checked for that value via numeric extraction with a
+  relative tolerance, trying several scales (raw, ×100 for fraction→percentage,
+  ÷1e3/1e6/1e9 for dollar figures abbreviated in prose like "$610.7 million").
+  Tests faithfulness: did the agent state what was actually computed, not a
+  hallucinated or garbled number.
+- **Document leg**: samples 2 real documents per `document_type` from the
+  landed corpus and parses their `body_text` against the exact templates in
+  `lp_documents.py` (same source of truth, not a separate guess) to get
+  known facts and the expected `lp_document_id`. Scores groundedness
+  (does the answer contain the actual fact) and citation-accuracy
+  (did it cite the right document) **separately** from citation-annotation
+  coverage, since `file_citation` annotations are known to not always attach
+  even when the answer is genuinely grounded (see `document_agent.py`) —
+  conflating "no annotation" with "wrong/no grounding" would be inaccurate.
+
+**Finding (2026-07-20), reproduced across two live runs**: structured leg
+6/6 grounded. Document leg 5/6 grounded, 5/6 citation-accuracy, 6/6
+annotation coverage — the one consistent failure is disambiguating two
+near-duplicate `quarterly_letter` documents from the *same investor* across
+different quarters. Across both runs, `file_search` cited a *different*
+wrong document each time (`LPD-000058`, then `LPD-000434`) and stated a
+different wrong company count each time (8, then 5) — not a fluke or one
+confusable pair, a genuine retrieval-ranking weakness specific to this
+document type's generic, repetitive phrasing ("The fund's portfolio spans N
+companies..."). `capital_call_notice`/`memo` documents, which contain
+distinctive dollar amounts and company names, cited correctly 4/4 times.
+Recorded honestly rather than tuned away — an eval that always passes isn't
+telling you anything.
 
 ## Why a separate folder from `data-generator/`
 
