@@ -301,6 +301,34 @@ every merge, fighting how git merges actually work.
 deployment pipeline are both live across all three environments. First
 actual content promotion (Dev → Test) not yet exercised.
 
+**Revision 2026-07-20 (same day) — Git integration is the promotion
+mechanism; the Fabric deployment pipeline's Deploy button is not used.**
+
+The first attempted promotion surfaced a real conflict between the two
+mechanisms DD-12 originally described as complementary. Because `pevc-test`
+and `pevc-prod`'s Git connections were established *after* `/fabric/pevc/`
+already held full content (inherited from the folder rename, itself done
+before those workspaces existed), Git sync alone fully populated both
+workspaces on connection — independently of the deployment pipeline. The
+pipeline's Compare view then showed those Git-synced items as **"Not in
+source"** (unlinked to Dev's items by the pipeline's own tracking) alongside
+a second, separately-tracked copy ready to Deploy — clicking Deploy would
+have created duplicates of every item, not performed a clean promotion.
+
+**Choice:** Git integration (PR merge `dev` → `test` → `main`, each
+workspace's own Git sync pulling the merge in) is the actual promotion
+mechanism. The `pevc-pipeline` deployment pipeline stays connected but its
+Deploy button is deliberately unused — kept only for its Compare/diff view
+if drift between environments needs eyeballing, not as a promotion path.
+Running both as independent promotion mechanisms into the same workspaces
+is what produced the duplication risk; picking one avoids it.
+
+**Caveat carried forward:** Git sync carries item *definitions* (notebook
+code, semantic model schema, lakehouse structure), not data — Delta table
+contents aren't tracked by Git. A promoted workspace needs its ingestion/
+conformed notebooks re-run there to populate real data; merging a branch
+alone does not.
+
 ---
 
 ## DD-13. Foundry-composed fusion agent for AI integration (WS5 Option B)
