@@ -1,11 +1,14 @@
 # Deployment Pipelines
 
-> **Status:** Implemented at portfolio scope (2026-07-20) — see DD-12's revisions in
-> [`design_decisions.md`](../docs/design_decisions.md). **Git integration is the
-> promotion mechanism** (PR merge `dev` → `test` → `main`); the Fabric deployment
-> pipeline (`pevc-pipeline`) stays connected but its Deploy button is deliberately
-> unused — see §1 and §3 for why running both as independent promotion paths into the
-> same workspaces produced a real duplication risk on the first attempt.
+> **Status:** Implemented and confirmed working end to end (2026-07-20) — see DD-12's
+> revisions in [`design_decisions.md`](../docs/design_decisions.md). **Git integration
+> is the promotion mechanism** (PR merge `dev` → `test` → `main`); the Fabric
+> deployment pipeline (`pevc-pipeline`) stays connected but its Deploy button is
+> deliberately unused — see §1 and §3 for why running both as independent promotion
+> paths into the same workspaces produced a real duplication risk on the first
+> attempt. A real change was promoted through both hops and verified via the Fabric
+> REST API (§6) — remaining gap is that promoted definitions haven't been re-run to
+> produce actual data in Test/Prod yet.
 
 This document describes the CI/CD approach for promoting Fabric artefacts across environments: Dev → Test → Prod.
 
@@ -130,18 +133,28 @@ Not all items promote on the same cadence:
 
 ## 6. Roadmap items
 
-Provisioned (2026-07-20): all three workspaces exist, each Git-connected to its own
-branch at a shared folder path (`pevc-dev`↔`dev`, `pevc-test`↔`test`, `pevc-prod`↔`main`).
-`pevc-test`/`pevc-prod` already hold item definitions via that initial Git sync.
-`pevc-pipeline` (Fabric deployment pipeline) is connected but its Deploy button is
-intentionally not used (§1). Still open:
+**Confirmed working end to end (2026-07-20).** A real change (markdown added to
+`05_gold_star_schema`, committed via `pevc-dev`'s Source Control panel) was promoted
+`dev` → `test` → `main` via two PR merges (#1, #2), with each of `pevc-test`/`pevc-prod`
+pulling the merge in through their own Git sync — no deployment-pipeline Deploy button
+involved. Verified independently via the Fabric REST API, not just visual inspection:
+`GET /v1/workspaces/{id}/git/status` for both `pevc-test` and `pevc-prod` returned
+`workspaceHead == remoteCommitHash` with `changes: []`, matching each branch's actual
+HEAD commit.
 
-- **A first real promotion via the actual Git-driven flow** — a PR merge `dev` → `test`
-  with a genuine code change, confirming the sync-in and re-run-notebooks-for-data steps
-  work end to end. Not yet exercised (the only promotion attempted so far was via the
-  deployment pipeline's Deploy button, abandoned once it was clear it would duplicate
-  content already present from the initial Git sync — see DD-12's second 2026-07-20
-  revision).
+**The "definitions only, not data" caveat is also confirmed, not just assumed.**
+Listing `pevc-test`'s `landing_lakehouse` OneLake path
+(`Tables/Tables/dbo` via the ADLS Gen2 API) shows the schema-enabled-lakehouse
+scaffolding present but **zero actual table folders underneath** — the Git-synced
+lakehouse is a structurally-correct empty shell. Getting real data into a promoted
+workspace requires re-running the ingestion/conformed notebooks there; that step has
+not been exercised yet.
+
+Still open:
+
+- Re-run the notebooks in `pevc-test`/`pevc-prod` to confirm the promoted definitions
+  actually produce correct data when executed in a fresh environment (the "does the
+  promoted *logic* work, not just does the *file* copy correctly" test)
 - Automated evaluation runs on AI artefacts before promotion to Prod (`ai-integration/evaluate_agents.py`
   exists per WS5 Stage E — wiring it in as a promotion gate, e.g. a required PR check,
   is not yet done)
