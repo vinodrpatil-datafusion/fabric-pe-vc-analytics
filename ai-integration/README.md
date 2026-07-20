@@ -14,7 +14,7 @@ the structured leg is a custom function-calling agent instead, not the native it
 | A | Synthetic LP document corpus (`data-generator/pevc_generator/lp_documents.py`) | Complete — see DD-17 |
 | B | Index the corpus in Azure AI Foundry (`index_corpus.py`) | Complete — 1,568/1,568 files verified completed, 0 failed (`verify_corpus.py`) |
 | C | Custom function-calling agent over the Gold schema (`structured_agent.py`) | Complete — validated against live `pevc-semantic-model` across single-measure, sector-filtered, and multi-step comparison questions |
-| D | Fusion agent — routes structured / document / hybrid questions to both legs | Not started |
+| D | Fusion agent — routes structured / document / hybrid questions to both legs (`fusion_agent.py`) | Complete — structured/document/hybrid routing, both legs, and hybrid synthesis validated against live data |
 | E | Evaluation harness — groundedness + citation-accuracy, scored per leg | Not started |
 
 ## Setup
@@ -28,6 +28,8 @@ python verify_corpus.py   # confirm live per-file status directly via the API --
                           # the Foundry portal's "Failed files" card can show
                           # stale/orphaned counts (see index_corpus.py's docstring)
 python structured_agent.py "What's the MOIC for the 2022 vintage?"   # Stage C
+python document_agent.py "What have LP letters said about portfolio risk?"   # Stage D leg
+python fusion_agent.py "How did FinTech perform, and what did LPs say about it?"   # Stage D
 ```
 
 `.env` is git-ignored — never commit real endpoints/keys, same placeholder discipline
@@ -127,10 +129,76 @@ allowed `index_corpus.py`'s vector-store calls to work, and in this project
 turned out to need adding at *both* the Azure IAM level and a project-level
 Foundry "Users"/Management Center list, two distinct permission surfaces),
 one `InteractiveBrowserCredential` requests tokens for both scopes. Set
-`STRUCTURED_AGENT_LOGIN_HINT` in `.env` to that account — never hardcode a
-real account name in this script or its docs, only in the git-ignored `.env`.
-Token caching is persistent (macOS Keychain via `TokenCachePersistenceOptions`),
+`AGENT_LOGIN_HINT` in `.env` to that account — never hardcode a real account
+name in this script or its docs, only in the git-ignored `.env`. Token
+caching is persistent (macOS Keychain via `TokenCachePersistenceOptions`),
 so the browser prompt appears once, not on every run.
+
+Auth and env-loading now live in `agent_common.py` (`build_context()`),
+shared with `document_agent.py` and `fusion_agent.py` so a run authenticates
+once regardless of how many legs it touches — `structured_agent.py` is still
+fully runnable standalone; `answer_structured()` is also what
+`fusion_agent.py` calls when it routes a question here.
+
+**Transient LLM-call failures retry automatically** — `agent_common.py`'s
+`call_with_retry()` wraps every `chat.completions.create`/`responses.create`
+call across all three scripts (`MAX_LLM_CALL_ATTEMPTS`, default 3). Seen in
+practice: a `401 PermissionDenied` from a fully-permissioned, working account
+that resolved itself on a bare retry seconds later — same class of
+backend flakiness as `index_corpus.py`'s upload retries, not a real
+permissions regression. A genuinely permanent failure still surfaces, just
+after the retries instead of on the first attempt.
+
+## How `document_agent.py` works
+
+The document-retrieval leg, over the Stage B corpus (`pevc-lp-documents`).
+Uses the OpenAI **Responses API**'s built-in `file_search` tool
+(`responses.create(..., tools=[{"type": "file_search", "vector_store_ids": [...]}])`)
+— retrieval and grounded narration happen in one call, citations come back
+as `file_citation` annotations on the output.
+
+**Not the raw `vector_stores.search()` endpoint** — that was the original
+design and it 404'd against this project's store. That endpoint sends an
+`OpenAI-Beta: assistants=v2` header (the older Assistants-beta surface);
+Foundry's Knowledge item here is typed `ManagedAzureSearch` (visible in the
+portal under Build → Agents → Knowledge, not a standalone searchable
+resource), and the classic Assistants-beta search route apparently isn't
+wired up for that backend. The newer Responses API's tool-based
+`file_search` worked instead. If this breaks again on a future SDK/platform
+change, re-check that assumption before assuming file_search itself is
+unreachable.
+
+**Cite via filename, not a lookup** — every indexed file is named
+`<lp_document_id>.txt` (`index_corpus.py`'s materialize step), so a
+`file_citation` annotation's `filename` field *is* the citation — no
+separate ID resolution needed, and it's traceable to `lp_document_manifest`
+for Stage E's citation-accuracy scoring. The system prompt requires
+answering only from file_search results and saying so plainly if they don't
+actually answer the question, rather than padding with generic commentary.
+
+## How `fusion_agent.py` works
+
+The router (DD-13). Classifies each question, then invokes the already-
+independent legs as whole units — deliberately *not* one LLM with tool
+access to both legs, which DD-13 explicitly considered and rejected (opaque
+routing, and Stage E needs per-leg groundedness/citation-accuracy scores,
+not a blended one).
+
+1. **Classify** — a single forced tool call (`classify_question`) with an
+   `enum`-constrained `route: "structured" | "document" | "hybrid"`, same
+   pattern as `structured_agent.py`'s `sector_group` enum: the output is
+   always exactly one of the three, never free text to parse or a guessed
+   label.
+2. **Dispatch** — `structured`/`document` call that one leg directly;
+   `hybrid` calls both.
+3. **Synthesise (hybrid only)** — one more LLM call composes the two leg
+   outputs into a single coherent answer, instructed to preserve every
+   caveat and citation from both and flag it explicitly if they conflict,
+   rather than silently picking one.
+4. **Partial-failure handling** — in a hybrid run, if one leg raises, the
+   other leg's answer is still returned with an explicit note about which
+   leg failed, rather than the whole question failing or the gap being
+   silently dropped (DD-13: report failure modes honestly).
 
 ## Why a separate folder from `data-generator/`
 

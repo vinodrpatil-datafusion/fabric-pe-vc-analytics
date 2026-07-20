@@ -21,14 +21,16 @@ your workspace -> Manage access -> add the Foundry account; or the Foundry
 resource's IAM -> add the Fabric account the "Cognitive Services OpenAI
 User" role), a single credential can request tokens for both scopes -- Azure
 AD doesn't care that they're different resource audiences, only that the
-signed-in principal has each resource's RBAC. Set `STRUCTURED_AGENT_LOGIN_HINT`
-in `.env` (git-ignored -- never hardcode an account name here) to that
-account so the browser prompt pre-fills it.
+signed-in principal has each resource's RBAC. Set `AGENT_LOGIN_HINT` in
+`.env` (git-ignored -- never hardcode an account name here) to that account
+so the browser prompt pre-fills it.
 
-Auth uses a single `InteractiveBrowserCredential` with persistent (macOS
-Keychain-backed) token caching, so the browser sign-in prompt only appears
-once -- the first run, or whenever the cached token needs renewal -- not on
-every invocation.
+Auth (a single `InteractiveBrowserCredential` with persistent macOS
+Keychain-backed token caching, so the browser sign-in prompt only appears
+once) now lives in `agent_common.py`, shared with `document_agent.py` and
+`fusion_agent.py` -- authenticating once per run instead of once per leg.
+This module is still fully runnable standalone; `answer_structured()` is
+also what `fusion_agent.py` calls when it routes a question to this leg.
 
 Usage:
     python structured_agent.py "What's the MOIC for the 2022 vintage?"
@@ -38,19 +40,13 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 import sys
-from pathlib import Path
 from typing import Any
 
 import requests
-from azure.identity import InteractiveBrowserCredential, TokenCachePersistenceOptions
-from dotenv import load_dotenv
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-POWERBI_SCOPE = "https://analysis.windows.net/powerbi/api/.default"
-FOUNDRY_SCOPE = "https://ai.azure.com/.default"
-TOKEN_CACHE_NAME = "fabric-pe-vc-analytics-structured-agent"
+from agent_common import build_context, call_with_retry, log as _common_log
+
 EXECUTE_QUERIES_URL_TEMPLATE = (
     "https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/datasets/{dataset_id}/executeQueries"
 )
@@ -60,7 +56,7 @@ MAX_TOOL_ROUNDS = 6
 
 
 def log(msg: str) -> None:
-    print(f"[structured_agent] {msg}")
+    _common_log("structured_agent", msg)
 
 
 # --- DAX query construction -------------------------------------------------
@@ -342,44 +338,13 @@ SYSTEM_PROMPT = (
 )
 
 
-def main() -> int:
-    load_dotenv(REPO_ROOT / "ai-integration" / ".env")
-    endpoint = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
-    deployment = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT")
-    workspace_id = os.environ.get("POWERBI_WORKSPACE_ID")
-    dataset_id = os.environ.get("POWERBI_DATASET_ID")
-    missing = [
-        name for name, val in [
-            ("AZURE_AI_PROJECT_ENDPOINT", endpoint),
-            ("AZURE_AI_MODEL_DEPLOYMENT", deployment),
-            ("POWERBI_WORKSPACE_ID", workspace_id),
-            ("POWERBI_DATASET_ID", dataset_id),
-        ] if not val
-    ]
-    if missing:
-        log(f"Missing required .env values: {', '.join(missing)}")
-        return 1
-
-    from azure.ai.projects import AIProjectClient
-
-    question = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_QUESTION
-    log(f"Question: {question}")
-
-    # Single credential, persistently cached (macOS Keychain) -- requires the
-    # signed-in account to have RBAC on *both* resources (see module
-    # docstring). One browser prompt on first run, silent reuse after that.
-    login_hint = os.environ.get("STRUCTURED_AGENT_LOGIN_HINT")
-    log("Authenticating (cached after first run -- see STRUCTURED_AGENT_LOGIN_HINT in .env for which account)...")
-    credential = InteractiveBrowserCredential(
-        login_hint=login_hint,
-        cache_persistence_options=TokenCachePersistenceOptions(name=TOKEN_CACHE_NAME),
-    )
-    credential.get_token(FOUNDRY_SCOPE)
-    project_client = AIProjectClient(endpoint=endpoint, credential=credential)
-    openai_client = project_client.get_openai_client()
-
-    fabric_token = credential.get_token(POWERBI_SCOPE).token
-
+def answer_structured(openai_client: Any, deployment: str, fabric_token: str, workspace_id: str, dataset_id: str,
+                       question: str) -> str:
+    """Runs the full structured-leg tool-calling loop for one question and
+    returns the final narrated answer. Raises RuntimeError if the model never
+    reaches a final text answer within MAX_TOOL_ROUNDS, or returns an empty
+    final response -- callers (this module's main(), or fusion_agent.py)
+    decide how to surface that."""
     sector_groups = fetch_sector_groups(fabric_token, workspace_id, dataset_id)
     log(f"Live sector_group values: {sector_groups}")
     tools = build_tools(sector_groups)
@@ -395,15 +360,14 @@ def main() -> int:
     # final text answer. A fixed one-shot follow-up printed "None" whenever
     # the second response was itself another tool call rather than text.
     for _ in range(MAX_TOOL_ROUNDS):
-        response = openai_client.chat.completions.create(model=deployment, messages=messages, tools=tools)
+        response = call_with_retry(openai_client.chat.completions.create, model=deployment, messages=messages,
+                                    tools=tools)
         choice = response.choices[0]
 
         if not choice.message.tool_calls:
             if not choice.message.content:
-                log("Model returned an empty final response (no tool_calls, no content) -- rerun the question.")
-                return 1
-            print(f"\n{choice.message.content}")
-            return 0
+                raise RuntimeError("Model returned an empty final response (no tool_calls, no content).")
+            return choice.message.content
 
         messages.append(choice.message)
         for tool_call in choice.message.tool_calls:
@@ -415,8 +379,28 @@ def main() -> int:
                 "content": json.dumps(result),
             })
 
-    log(f"Gave up after {MAX_TOOL_ROUNDS} tool-call rounds without a final answer.")
-    return 1
+    raise RuntimeError(f"Gave up after {MAX_TOOL_ROUNDS} tool-call rounds without a final answer.")
+
+
+def main() -> int:
+    question = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_QUESTION
+    log(f"Question: {question}")
+
+    try:
+        ctx = build_context()
+    except RuntimeError as e:
+        log(str(e))
+        return 1
+
+    try:
+        answer = answer_structured(ctx.openai_client, ctx.deployment, ctx.fabric_token, ctx.workspace_id,
+                                    ctx.dataset_id, question)
+    except RuntimeError as e:
+        log(str(e))
+        return 1
+
+    print(f"\n{answer}")
+    return 0
 
 
 if __name__ == "__main__":
