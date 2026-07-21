@@ -2,7 +2,7 @@
 
 > A reference architecture and working portfolio project for institutional private equity and venture capital analytics, built on Microsoft Fabric.
 
-**Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration (WS5, fusion agent) complete and validated against live data. Deployment pipelines remain in progress.
+**Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration (WS5, fusion agent) complete and validated against live data. Deployment pipelines (`pevc-dev`/`pevc-test`/`pevc-prod`, Git-driven promotion) complete and verified end to end.
 **Author:** Vinod Patil — Lead Data & AI Engineer ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
@@ -43,7 +43,7 @@ mechanism differs.
 ## Architecture at a glance
 
 ```
-External sources                    Items within pevc-dev (single workspace)
+External sources                    Items within one workspace per env tier
 ─────────────────                   ────────────────────────────────────────
 DealRoom (ndjson)        ─┐
 S&P / Capital IQ-style   ─┤
@@ -159,11 +159,15 @@ fabric-pe-vc-analytics/
 │   ├── measures.md                Measure contract for the semantic model (LP meaning, definitions, caveats)
 │   └── governance.md             RBAC, sensitivity, lineage approach
 ├── infrastructure/
-│   ├── workspace_layout.md       Fabric workspace structure
-│   └── deployment_pipelines.md   CI/CD approach (in progress)
+│   ├── workspace_layout.md              Fabric workspace structure
+│   ├── deployment_pipelines.md          CI/CD approach — implemented, Git-driven promotion
+│   ├── fixup_environment_bindings.py    Automates the six environment-binding fixes below
+│   └── requirements.txt
 ├── data-generator/                Python package producing synthetic landing feeds
 ├── sample-data/                   Committed generator output (seed=42, scale=small)
-├── ai-integration/                 WS5 fusion agent — Foundry IQ indexing, structured-retrieval agent
+├── ai-integration/                 WS5 fusion agent (Stages A–E, all complete) — corpus
+│                                    generation, Foundry indexing, structured + document
+│                                    retrieval legs, routing/fusion, evaluation harness
 ├── notebooks/
 │   ├── README.md                        Stage map, reconciliation policy, run instructions
 │   ├── 01_schema_validation.ipynb       Stage A — structural validation + quarantine
@@ -171,10 +175,12 @@ fabric-pe-vc-analytics/
 │   ├── 03_bitemporal_load.ipynb         Stage C — effective/ingestion dates + SCD2
 │   ├── 04_data_quality_assertions.ipynb Stage D — referential integrity certification
 │   └── 05_gold_star_schema.ipynb        Stage E — Gold star schema (WS3)
-└── fabric/pevc-dev/               Fabric Git integration sync folder — Fabric's own
-                                    Commit operation writes here (notebooks, lakehouses,
-                                    the DirectLake semantic model, the Power BI report),
-                                    one subfolder per workspace item; not hand-edited
+└── fabric/pevc/                   Fabric Git integration sync folder, shared across all
+                                    three environments (`pevc-dev`↔`dev` branch,
+                                    `pevc-test`↔`test`, `pevc-prod`↔`main`, same folder
+                                    path on every branch — see
+                                    infrastructure/deployment_pipelines.md). Fabric's own
+                                    Commit operation writes here; not hand-edited
 ```
 
 **Not yet created (planned, not part of the current tree):**
@@ -190,9 +196,9 @@ fabric-pe-vc-analytics/
 | Gold star schema (Lakehouse Delta) | ✅ Complete | Grain per DD-15; `notebooks/05_gold_star_schema.ipynb` executed and certified against the live `pevc-dev` tenant |
 | DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, 5 core LP measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) plus 2 supporting DAX measures; full contract in [`docs/measures.md`](docs/measures.md) |
 | Power BI report | ✅ Complete | `LP Portfolio Performance` — KPI cards, vintage/sector tables, sector-concentration chart, DirectLake-connected |
-| Git integration (Fabric ↔ GitHub) | ✅ Complete | `pevc-dev` workspace connected to this repo, folder `fabric/pevc-dev/` |
+| Git integration (Fabric ↔ GitHub) | ✅ Complete | All three environments connected, folder `fabric/pevc/` (shared across branches — see below) |
 | AI integration (fusion agent, WS5) | ✅ Complete | Pattern in DD-13 (`ai-integration/`); Stages A–E all complete and validated against live data — corpus generation, Foundry indexing, structured + document retrieval legs, routing/fusion, and an oracle-based evaluation harness (structured leg 6/6 grounded, document leg 5/6 with a documented citation-accuracy finding) |
-| Deployment pipelines (CI/CD via Git) | 📐 Designed, partially implemented | Design in `infrastructure/deployment_pipelines.md`; Git integration is live, Dev/Test/Prod promotion pipelines are not |
+| Deployment pipelines (CI/CD via Git) | ✅ Complete | `pevc-dev`/`pevc-test`/`pevc-prod`, Git-driven promotion (PR merge `dev`→`test`→`main`, DD-12) verified end to end — data, notebooks, semantic model, and reports all working independently in Test/Prod; see `infrastructure/deployment_pipelines.md` |
 | Microsoft Purview lineage integration | 📐 Designed, not implemented | Governance model assumes Purview (see `docs/governance.md`); not wired up in the trial tenant |
 
 ## Related work

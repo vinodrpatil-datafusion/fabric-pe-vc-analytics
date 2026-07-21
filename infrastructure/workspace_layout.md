@@ -2,10 +2,12 @@
 
 This document specifies the Fabric workspace structure for the platform implementation. It is implementation-level detail; for the architectural rationale, see [`../docs/architecture.md`](../docs/architecture.md) Section 2.
 
-**As-built vs. target:** the live trial tenant runs everything in **one workspace,
-`pevc-dev`** (DD-14). This doc leads with that as-built structure, then documents the
-target production layout (workspace-per-layer, DD-10) as the design this build doesn't
-provision. Don't read the target section as current state.
+**As-built vs. target:** the live trial tenant runs each environment tier as **one
+workspace** — `pevc-dev`, `pevc-test`, `pevc-prod` (DD-14, extended across tiers per
+DD-12's revision) — not workspace-per-layer. This doc leads with that as-built
+structure, then documents the target production layout (workspace-per-layer, DD-10) as
+the design this build doesn't provision. Don't read the target section as current
+state.
 
 ---
 
@@ -18,13 +20,16 @@ provision. Don't read the target section as current state.
 
 ---
 
-## As-built: single workspace `pevc-dev`
+## As-built: one workspace per environment tier
 
-**Capacity:** F2 (trial), shared by everything below — no per-layer capacity split.
-**Purpose:** All layers (ingestion, conformed, Gold, BI — and, once built, AI) in one
-workspace. Separation is by item (lakehouse, notebook), not by workspace.
+**Capacity:** F2 (trial), shared by all three workspaces below — no per-layer or
+per-environment capacity split (see `deployment_pipelines.md` §4's as-built note).
+**Purpose:** All layers (ingestion, conformed, Gold, BI) in one workspace per
+environment tier. Separation within a tier is by item (lakehouse, notebook), not by
+workspace; separation across tiers is `pevc-dev`/`pevc-test`/`pevc-prod`, promoted via
+Git (see `deployment_pipelines.md`).
 
-**Items (current):**
+**Items (current, in each of `pevc-dev`/`pevc-test`/`pevc-prod`):**
 - Lakehouse: `landing_lakehouse` (+ SQL analytics endpoint) — raw feeds, reference files.
 - Lakehouse: `conformed_lakehouse` (+ SQL analytics endpoint) — Delta tables per domain
   entity (see [`../docs/data_model.md`](../docs/data_model.md)).
@@ -39,11 +44,17 @@ workspace. Separation is by item (lakehouse, notebook), not by workspace.
   [`../docs/measures.md`](../docs/measures.md).
 - Report: `LP Portfolio Performance` — Power BI report consuming the semantic model.
 
-**Items (planned, land in the same workspace per DD-14):**
-- AI serving artefacts (retrieval functions, prompt templates) once WS5 starts.
+**WS5 AI integration is not additional Fabric workspace items.** DD-13's fusion agent
+(Stages A–E, all complete — `ai-integration/`) is a custom Python codebase calling out
+to Azure AI Foundry (a separate Azure-subscription resource, not gated by Fabric
+capacity); nothing about it lands as a Lakehouse/notebook/etc. inside `pevc-dev` or any
+other workspace here.
 
-**RBAC (as-built):** single owner (Admin). The Member/Viewer tiering described in the
-target layout below isn't exercised — there's one identity operating the tenant.
+**RBAC (as-built):** single owner (Admin) per workspace. The Member/Viewer tiering
+described in the target layout below isn't exercised — there's one identity operating
+each environment (see `ai-integration/agent_common.py`'s docstring for the unrelated
+dual-identity situation that applies specifically to WS5's two Azure resources, not to
+these Fabric workspaces).
 
 ---
 
@@ -175,11 +186,15 @@ query patterns are unpredictable but moderate.
 
 ## Git integration
 
-**As-built:** `pevc-dev` is Git-connected to this repository (GitHub), folder
-`fabric/pevc-dev/`, as a single workspace — there's no per-layer folder split to
-Git-connect separately. Fabric's Commit operation writes one subfolder per workspace
-item there (`<name>.Notebook/`, `<name>.Lakehouse/`, `<name>.SemanticModel/`,
-`<name>.Report/`); it is not hand-edited.
+**As-built:** all three environment workspaces are Git-connected to this repository
+(GitHub) at the **same** folder, `fabric/pevc/` — `pevc-dev`↔`dev` branch,
+`pevc-test`↔`test`, `pevc-prod`↔`main` — there's no per-layer folder split, and
+deliberately no per-environment folder split either (see
+[`fabric/pevc/README.md`](../fabric/pevc/README.md) and `deployment_pipelines.md` for
+why a matching path across branches is what makes Git-driven promotion a plain merge).
+Fabric's Commit operation writes one subfolder per workspace item there
+(`<name>.Notebook/`, `<name>.Lakehouse/`, `<name>.SemanticModel/`, `<name>.Report/`); it
+is not hand-edited.
 
 **Target production layout**, if workspace-per-layer were built, would Git-connect each
 workspace to a workspace-scoped folder:
@@ -193,8 +208,12 @@ fabric-pe-vc-analytics/
 │   └── ws-serving-ai/
 ```
 
-Promotion across Dev → Test → Prod is via Fabric deployment pipelines. See [`deployment_pipelines.md`](deployment_pipelines.md) (in progress).
+Promotion across Dev → Test → Prod is Git-driven (PR merge between branches), not the
+Fabric deployment pipeline's Deploy button — implemented and verified end to end at
+portfolio scope, see [`deployment_pipelines.md`](deployment_pipelines.md) for the full
+account (including why both mechanisms running independently was tried first and
+produced a real duplication risk).
 
 ---
 
-*Last updated: 2026-07-15. Layout reflects portfolio implementation (DD-14); production sizing and workspace-split notes are target-design guidance, not built.*
+*Last updated: 2026-07-21. Layout reflects portfolio implementation (DD-14, extended across environment tiers per DD-12); production sizing and workspace-split notes are target-design guidance, not built.*

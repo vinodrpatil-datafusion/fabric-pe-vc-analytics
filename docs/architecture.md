@@ -18,15 +18,17 @@ The architecture is shaped by five principles, applied in order of precedence wh
 
 **1.4 Relational density modelled explicitly.** PE/VC is a graph problem at heart. Investor → fund → portfolio company → co-investor → board member relationships are first-class, not derived through application-layer joins.
 
-**1.5 Governance boundaries are explicit, not implicit.** Raw, conformed, and serving are kept separated — as distinct Fabric workspaces with distinct RBAC in a team/production deployment (DD-10), or as distinct lakehouses/items within a single workspace at the trial scope this build actually runs at (DD-14). Either way, cross-boundary access is through shortcuts (read-only) and explicit promotion paths, not ad-hoc reads across the data-quality boundary.
+**1.5 Governance boundaries are explicit, not implicit.** Raw, conformed, and serving are kept separated — as distinct Fabric workspaces with distinct RBAC in a team/production deployment (DD-10), or as distinct lakehouses/items within a single workspace per environment tier at the trial scope this build actually runs at (DD-14, extended per DD-12). Either way, cross-boundary access is through shortcuts (read-only) and explicit promotion paths, not ad-hoc reads across the data-quality boundary.
 
 ---
 
 ## 2. Workspace layout
 
-> **As-built note (DD-14):** the live trial tenant runs everything in **one Fabric
-> workspace, `pevc-dev`** — landing and conformed lakehouses, all conformed-layer
-> notebooks, and (once built) Gold/BI/AI artefacts together. The sections below
+> **As-built note (DD-14, extended across tiers per DD-12):** the live trial tenant runs
+> each environment tier as **one Fabric workspace** (`pevc-dev`/`pevc-test`/`pevc-prod`)
+> — landing and conformed lakehouses, all conformed-layer notebooks, and Gold/BI
+> artefacts together (WS5's AI layer is a separate Python codebase, not a Fabric
+> workspace item — see §2.3.3). The sections below
 > describe the **target, production-scale layout** (DD-10) — workspace-per-layer with
 > distinct RBAC — which this build documents but does not provision. Where the target
 > design says "workspace," the as-built equivalent is "lakehouse/item within
@@ -104,7 +106,7 @@ generate — see DD-05 for the "when you'd add it back" case.
 
 **Purpose:** Grounded AI workloads — retrieval, summarisation, structured insight generation.
 
-**Why a separate workspace (target design):** AI workloads have different access patterns (low-latency point-lookups + vector retrieval), different governance requirements (prompt/response logging, model versioning), and different cost models (per-token, not per-CU). At trial scope (DD-14) these artefacts live in `pevc-dev` alongside everything else; the cost/governance separation this argument describes doesn't bind for a single-tenant, single-owner build.
+**Why a separate workspace (target design):** AI workloads have different access patterns (low-latency point-lookups + vector retrieval), different governance requirements (prompt/response logging, model versioning), and different cost models (per-token, not per-CU). As actually built (WS5, complete — see `ai-integration/`), this isn't a Fabric workspace concern at all: the fusion agent is a separate Python codebase calling Azure AI Foundry (vector store + LLM), reading only from the conformed/Gold layer's Delta tables and the semantic model, not living inside any `pevc-*` workspace as an item. The cost/governance separation this target-design argument describes doesn't bind for a single-tenant, single-owner build either way.
 
 **Contents:**
 - Retrieval functions against conformed Delta
@@ -145,12 +147,26 @@ Three stages, in order. Each is independently observable.
 
 In the target design, serving workspaces read conformed Delta tables via OneLake
 shortcuts, each exposing its own access surface without duplicating storage. At trial
-scope (DD-14), serving items read the same `conformed_lakehouse` directly within
-`pevc-dev` — no shortcut hop needed since there's no workspace boundary to cross — but
-each surface (semantic model, AI retrieval functions) still reads, not copies, the
-underlying Delta tables.
+scope (DD-14, extended per DD-12), serving items read the same `conformed_lakehouse`
+directly within whichever of `pevc-dev`/`pevc-test`/`pevc-prod` they belong to — no
+shortcut hop needed since there's no workspace boundary to cross within a tier. This
+applies to the semantic model (reads Gold directly). WS5's AI layer is different: it's
+not a Fabric item reading Delta tables at all, but a separate Python codebase
+(`ai-integration/`) that queries the DirectLake semantic model over the Power BI REST
+API (structured leg) and Azure AI Foundry vector stores (document leg) — see §2.3.3 and
+§3.4.
 
-### 3.4 AI inference flow
+### 3.4 AI inference flow (target design)
+
+**As-built (WS5, complete):** the actual fusion agent (`ai-integration/fusion_agent.py`)
+is simpler than the seven-step flow below — it classifies a question as structured,
+document, or hybrid, dispatches to the structured agent (function-calling against
+`pevc-semantic-model`) and/or document agent (Foundry `file_search` over the LP
+document corpus), and synthesises hybrid answers; there's no separate relational-
+expansion hop, no dedicated inference audit table (see `governance.md` §4.2), and
+citation checking happens in `evaluate_agents.py`'s oracle-based harness, not as an
+inline output-validation step. The flow below is the original target design; read it as
+that, not as a description of what was built.
 
 For an AI-driven workload (e.g., "summarise the funding history of company X in the context of similar companies in our portfolio"):
 
@@ -203,7 +219,7 @@ Three audit substrates:
 
 ### 5.1 CI/CD via Git
 
-Fabric items (notebooks, lakehouses, semantic models, reports) are managed through Git integration — connected and in active use (`pevc-dev` ↔ this repo on GitHub, folder `fabric/pevc-dev/`). Deployment pipelines promoting across Dev → Test → Prod workspace tiers are not built — design documented in [`infrastructure/deployment_pipelines.md`](../infrastructure/deployment_pipelines.md), implementation still in progress.
+Fabric items (notebooks, lakehouses, semantic models, reports) are managed through Git integration — all three environment workspaces connected (`pevc-dev`↔`dev`, `pevc-test`↔`test`, `pevc-prod`↔`main`, this repo on GitHub, shared folder `fabric/pevc/`). Promotion across Dev → Test → Prod is Git-driven (PR merge between branches, each workspace's own Git sync pulling the merge in — DD-12's revision), not the Fabric deployment pipeline's Deploy button; both mechanisms running independently produced a real duplication risk on the first attempt. Fully implemented and verified end to end — data, notebooks, semantic model, and reports all working independently in Test/Prod — see [`infrastructure/deployment_pipelines.md`](../infrastructure/deployment_pipelines.md).
 
 ### 5.2 Capacity management
 

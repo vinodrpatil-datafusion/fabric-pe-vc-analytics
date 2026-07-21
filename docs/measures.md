@@ -3,7 +3,7 @@
 This document is the **business contract** for the measures in the DirectLake semantic
 model: what each number means from the LP's seat, at what grain it is valid, and which
 caveats travel with it. The **source of truth for implementation** is the TMDL under
-[`fabric/pevc-dev/pevc-semantic-model.SemanticModel/`](../fabric/pevc-dev/pevc-semantic-model.SemanticModel/definition/tables/gold_fact_investment.tmdl);
+[`fabric/pevc/pevc-semantic-model.SemanticModel/`](../fabric/pevc/pevc-semantic-model.SemanticModel/definition/tables/gold_fact_investment.tmdl);
 if this document and the TMDL disagree, the TMDL wins and this document has a bug.
 
 Decision rationale is **not** restated here — see
