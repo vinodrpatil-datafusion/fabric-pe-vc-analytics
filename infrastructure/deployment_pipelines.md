@@ -1,14 +1,17 @@
 # Deployment Pipelines
 
-> **Status:** Implemented and confirmed working end to end (2026-07-20) — see DD-12's
+> **Status:** Implemented and confirmed working end to end (2026-07-21) — see DD-12's
 > revisions in [`design_decisions.md`](../docs/design_decisions.md). **Git integration
 > is the promotion mechanism** (PR merge `dev` → `test` → `main`); the Fabric
 > deployment pipeline (`pevc-pipeline`) stays connected but its Deploy button is
 > deliberately unused — see §1 and §3 for why running both as independent promotion
 > paths into the same workspaces produced a real duplication risk on the first
 > attempt. A real change was promoted through both hops and verified via the Fabric
-> REST API (§6) — remaining gap is that promoted definitions haven't been re-run to
-> produce actual data in Test/Prod yet.
+> REST API (§6). **Both `pevc-test` and `pevc-prod` are now fully populated and their
+> notebooks run cleanly against their own independent data** (all conformed + Gold DQ
+> checks pass in both) — getting there required fixing two gaps Git sync alone didn't
+> handle: stale lakehouse bindings and hardcoded absolute paths in 4 of the 5
+> notebooks, in each environment (§6).
 
 This document describes the CI/CD approach for promoting Fabric artefacts across environments: Dev → Test → Prod.
 
@@ -147,21 +150,71 @@ Listing `pevc-test`'s `landing_lakehouse` OneLake path
 (`Tables/Tables/dbo` via the ADLS Gen2 API) shows the schema-enabled-lakehouse
 scaffolding present but **zero actual table folders underneath** — the Git-synced
 lakehouse is a structurally-correct empty shell. Getting real data into a promoted
-workspace requires re-running the ingestion/conformed notebooks there; that step has
-not been exercised yet.
+workspace requires re-running the ingestion/conformed notebooks there.
+
+**`pevc-test` fully populated and verified (2026-07-21).** Running the notebooks
+there surfaced two real gaps beyond the Git sync itself, both found and fixed before
+any data flowed:
+
+1. **Lakehouse metadata binding** — all 5 promoted notebooks still had their default
+   (and secondary) lakehouse attachment bound to `pevc-dev`'s actual workspace/lakehouse
+   IDs, despite physically living in `pevc-test`. Confirmed via `getDefinition` on each
+   notebook (the `dependencies.lakehouse` metadata block), fixed by manually re-attaching
+   each notebook's lakehouse(s) to `pevc-test`'s own in the portal, reverified via the
+   same API call afterward. Left uncommitted (not pushed to `test`) deliberately —
+   committing an environment-specific binding would conflict with `dev`'s version of the
+   same lines on the next real promotion.
+2. **Hardcoded absolute paths in code, independent of the metadata binding** —
+   `01_schema_validation`'s `LANDING_FILES` and the reference-file path in
+   `02_reconciliation`/`03_bitemporal_load`/`04_data_quality_assertions` are plain
+   `abfss://<workspace-id>@onelake.../<lakehouse-id>/...` string literals, still pointing
+   at `pevc-dev` even after the metadata fix. `05_gold_star_schema` has no hardcoded
+   paths (reads only via `spark.read.table` through its lakehouse attachment). Fixed by
+   editing the 4 literals to `pevc-test`'s IDs, reverified via `getDefinition`. Same
+   "leave uncommitted" reasoning as the lakehouse binding.
+3. Landing data itself also needed uploading (`pevc-test`'s `landing_lakehouse` started
+   with zero source files) — 18 files across `capitaliq`/`dealroom`/`internal`(3 of 5
+   files only)/`reference`, matching `pevc-dev`'s real structure exactly, verified via
+   OneLake directory listing before running anything.
+
+With all three fixed, `01`→`05` ran cleanly against `pevc-test`'s own, independent
+storage (verified via OneLake table listings after each step, not just "the notebook
+said success"): **conformed layer's `dq_assertions_report` — all 45 checks PASS**;
+**Gold layer's `gold_dq_assertions_report` — 6 PASS, 1 WARN**, the identical known
+generator-calibration artifact already documented for `pevc-dev` (funding rounds
+closing before company `founded_date`) — not a new problem, a consistent match to the
+known-good baseline.
+
+**`pevc-prod` repeated the same three fixes and got the same clean result.** One
+miss on the first pass: `05_gold_star_schema`'s lakehouse binding was left pointing at
+`pevc-dev` — easy to miss since it's the one notebook with no hardcoded path to also
+edit, so nothing else prompted a return to it. Caught by re-running the same
+`getDefinition` verification, fixed the same way. Once all three fixes were confirmed,
+`01`→`05` produced an identical result to `pevc-test`: conformed layer 45/45 PASS,
+Gold layer 6 PASS/1 WARN (same calibration artifact).
+
+**Verification lesson, worth remembering if this OneLake-listing technique gets reused:**
+checking `pevc-prod`'s Gold DQ report this way first showed what looked like 14 rows
+(every check duplicated) instead of 7. That wasn't a real bug — `05_gold_star_schema`
+had been run twice, and `.mode("overwrite")` on Delta tables doesn't delete old
+physical parquet files immediately, it marks them removed in `_delta_log` and leaves
+them until vacuumed. A naive "list every `.parquet` file in the table folder" query
+picks up both the superseded and current files. The fix is to read `_delta_log`'s
+`add`/`remove` actions (or just use a real Spark/SQL-endpoint read) to know which
+files are actually active, rather than assuming every file present is live.
 
 Still open:
 
-- Re-run the notebooks in `pevc-test`/`pevc-prod` to confirm the promoted definitions
-  actually produce correct data when executed in a fresh environment (the "does the
-  promoted *logic* work, not just does the *file* copy correctly" test)
 - Automated evaluation runs on AI artefacts before promotion to Prod (`ai-integration/evaluate_agents.py`
   exists per WS5 Stage E — wiring it in as a promotion gate, e.g. a required PR check,
   is not yet done)
 - Environment-specific data masking rules
 - Environment-specific capacity/parameterisation (see §4's as-built note)
 - Integration with Azure DevOps Pipelines for the non-Fabric items (Azure OpenAI deployments, supporting Azure resources)
+- A more durable fix than manual per-environment rebinding — e.g. parameter-cell-driven
+  lakehouse resolution at notebook runtime instead of hardcoded literals — is worth
+  considering if this project ever adds a third non-Dev environment beyond Test/Prod
 
 ---
 
-*Last updated: 2026-07-20. This is a living document for an active build.*
+*Last updated: 2026-07-21. This is a living document for an active build.*
