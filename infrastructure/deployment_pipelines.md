@@ -9,10 +9,11 @@
 > attempt. A real change was promoted through both hops and verified via the Fabric
 > REST API (§6). **Both `pevc-test` and `pevc-prod` are now fully populated, their
 > notebooks run cleanly against their own independent data, and both Power BI reports
-> load correctly** — getting there required fixing four gaps Git sync alone didn't
-> handle: stale lakehouse bindings and hardcoded absolute paths in the notebooks, a
-> DirectLake semantic model still pointing at `pevc-dev`'s Gold lakehouse, and a stale
-> SQL analytics endpoint metadata cache, in each environment (§6).
+> load correctly** — getting there required fixing six environment-binding gaps Git
+> sync alone didn't handle (stale lakehouse bindings, hardcoded absolute paths, a
+> DirectLake semantic model still pointing at `pevc-dev`, a stale SQL analytics
+> endpoint metadata cache — §6), now automated end to end by
+> `fixup_environment_bindings.py` (§7) and validated against both live environments.
 
 This document describes the CI/CD approach for promoting Fabric artefacts across environments: Dev → Test → Prod.
 
@@ -238,14 +239,48 @@ Still open:
 - Environment-specific data masking rules
 - Environment-specific capacity/parameterisation (see §4's as-built note)
 - Integration with Azure DevOps Pipelines for the non-Fabric items (Azure OpenAI deployments, supporting Azure resources)
-- A more durable fix than manual per-environment rebinding — e.g. parameter-cell-driven
-  lakehouse resolution at notebook runtime instead of hardcoded literals, and whatever
-  the equivalent is for a DirectLake semantic model's data source — is worth considering
-  if this project ever adds a third non-Dev environment beyond Test/Prod. Six distinct
-  environment-binding gaps surfaced across notebooks, the semantic model, and the SQL
-  endpoint before this promotion flow was genuinely clean end to end; that count is
-  itself the strongest argument for automating this rather than repeating it by hand
-  a third time
+- ~~A more durable fix than manual per-environment rebinding~~ — **done:**
+  `fixup_environment_bindings.py` (below)
+
+## 7. `fixup_environment_bindings.py`
+
+Automates all six binding fixes above, given a target environment name. Same
+mechanism as Git integration itself — every fix is a `getDefinition`/
+`updateDefinition` REST call, not a workaround. Driven by name lookups
+(workspace, lakehouse, notebook, semantic model names), not hardcoded GUIDs,
+so it's reusable if a third non-Dev environment is ever added.
+
+**How it works:** every one of the six gaps found by hand turned out to be
+the same source-workspace/lakehouse GUIDs appearing as plain substrings in
+TMDL/notebook text — a notebook's `dependencies.lakehouse` metadata block, a
+hardcoded `abfss://` path, the semantic model's `AzureStorage.DataLake(...)`
+connection string. So the fix is one blanket old-GUID → new-GUID
+substitution map, applied to just the relevant text parts of each item's
+definition (leaving tables, relationships, measures, other code cells
+untouched), pushed back only if something actually changed. Also triggers a
+SQL analytics endpoint metadata refresh for all three lakehouses regardless
+(cheap, idempotent, and was the sixth gap).
+
+**What it doesn't do**: upload landing data into a fresh `landing_lakehouse`,
+or run the conformed/Gold notebooks — those stay manual (lower-frequency,
+closer to one-time-per-environment concerns). This script only fixes the
+bindings that would otherwise make those manual runs silently target the
+wrong environment's storage.
+
+**Validated (2026-07-21)**: run against both `pevc-test` and `pevc-prod`
+(both already correctly bound from the manual fixes earlier the same day) —
+correctly reported "no source-environment references found" for every
+notebook and the semantic model in both environments, and safely re-triggered
+the SQL endpoint refresh regardless. Confirms the substitution logic matches
+reality without needing to break a binding first just to test the fix.
+
+```bash
+cd infrastructure
+pip install -r requirements.txt
+az login   # the identity with RBAC on the target workspace
+python fixup_environment_bindings.py --target pevc-test
+python fixup_environment_bindings.py --target pevc-prod --yes   # --yes skips the confirmation prompt
+```
 
 ---
 
