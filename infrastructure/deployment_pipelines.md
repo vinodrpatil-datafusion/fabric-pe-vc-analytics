@@ -7,11 +7,12 @@
 > deliberately unused — see §1 and §3 for why running both as independent promotion
 > paths into the same workspaces produced a real duplication risk on the first
 > attempt. A real change was promoted through both hops and verified via the Fabric
-> REST API (§6). **Both `pevc-test` and `pevc-prod` are now fully populated and their
-> notebooks run cleanly against their own independent data** (all conformed + Gold DQ
-> checks pass in both) — getting there required fixing two gaps Git sync alone didn't
-> handle: stale lakehouse bindings and hardcoded absolute paths in 4 of the 5
-> notebooks, in each environment (§6).
+> REST API (§6). **Both `pevc-test` and `pevc-prod` are now fully populated, their
+> notebooks run cleanly against their own independent data, and both Power BI reports
+> load correctly** — getting there required fixing four gaps Git sync alone didn't
+> handle: stale lakehouse bindings and hardcoded absolute paths in the notebooks, a
+> DirectLake semantic model still pointing at `pevc-dev`'s Gold lakehouse, and a stale
+> SQL analytics endpoint metadata cache, in each environment (§6).
 
 This document describes the CI/CD approach for promoting Fabric artefacts across environments: Dev → Test → Prod.
 
@@ -203,6 +204,32 @@ picks up both the superseded and current files. The fix is to read `_delta_log`'
 `add`/`remove` actions (or just use a real Spark/SQL-endpoint read) to know which
 files are actually active, rather than assuming every file present is live.
 
+**A fifth gap, found only once someone actually opened the Power BI report:**
+`pevc-semantic-model`'s DirectLake source is not controlled by anything a notebook's
+lakehouse-explorer-style rebinding touches. Its `definition/expressions.tmdl` hardcodes
+an `AzureStorage.DataLake(...)` connection string with `pevc-dev`'s exact workspace ID
+and `gold_lakehouse` ID, baked in at whatever point the model was originally created —
+Git-syncing the model into `pevc-test`/`pevc-prod` carried that string over unchanged.
+Symptom: *"table 'gold_fact_investment' is not refreshed and fallback to DirectQuery is
+disabled for this semantic model."* No portal UI path was found to repoint a DirectLake
+model's source lakehouse ("Edit tables" only includes/excludes tables from whatever
+source is already bound; "Transform data" wasn't tried since the fix below worked) — a
+targeted fix was applied via the Fabric REST API's `updateDefinition`, editing only the
+one `expressions.tmdl` line (same mechanism Git integration itself uses to write these
+files, not a workaround), leaving every table/relationship/measure untouched. Verified
+by re-fetching the definition before touching anything further.
+
+**A sixth, related gap:** even after the DirectLake source was corrected, `pevc-test`'s
+report failed differently — *"Unable to load a query that produces no tables,"* and the
+model's "Edit tables" dialog couldn't enumerate any tables at all. The underlying Delta
+tables were confirmed still present via OneLake; the actual cause was the Lakehouse's
+**SQL analytics endpoint metadata cache** lagging behind the fresh Spark write from
+`05_gold_star_schema` — DirectLake's table discovery goes through that endpoint, not
+directly through OneLake. Fixed via the Fabric REST API's
+`POST /v1/workspaces/{id}/sqlEndpoints/{id}/refreshMetadata`, confirmed by the returned
+`lastSuccessfulSyncDateTime` jumping to the current time for all 5 tables. Both reports
+loaded correctly after this.
+
 Still open:
 
 - Automated evaluation runs on AI artefacts before promotion to Prod (`ai-integration/evaluate_agents.py`
@@ -212,8 +239,13 @@ Still open:
 - Environment-specific capacity/parameterisation (see §4's as-built note)
 - Integration with Azure DevOps Pipelines for the non-Fabric items (Azure OpenAI deployments, supporting Azure resources)
 - A more durable fix than manual per-environment rebinding — e.g. parameter-cell-driven
-  lakehouse resolution at notebook runtime instead of hardcoded literals — is worth
-  considering if this project ever adds a third non-Dev environment beyond Test/Prod
+  lakehouse resolution at notebook runtime instead of hardcoded literals, and whatever
+  the equivalent is for a DirectLake semantic model's data source — is worth considering
+  if this project ever adds a third non-Dev environment beyond Test/Prod. Six distinct
+  environment-binding gaps surfaced across notebooks, the semantic model, and the SQL
+  endpoint before this promotion flow was genuinely clean end to end; that count is
+  itself the strongest argument for automating this rather than repeating it by hand
+  a third time
 
 ---
 
