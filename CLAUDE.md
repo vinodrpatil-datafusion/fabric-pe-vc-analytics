@@ -9,7 +9,11 @@ A Microsoft Fabric reference architecture for PE/VC investment analytics. It is 
 - **`docs/`** — Architecture, data model, design decisions, governance (the canonical design authority)
 - **`data-generator/`** — Python package that produces synthetic multi-source landing feeds
 - **`sample-data/`** — Committed output from the generator (`seed=42`, `scale=small`)
-- **`infrastructure/`** — Fabric workspace layout and deployment pipeline design docs
+- **`ai-integration/`** — WS5 fusion agent (DD-13, complete): corpus indexing, structured
+  and document retrieval legs, routing, and an oracle-based evaluation harness
+- **`infrastructure/`** — Fabric workspace layout and deployment-pipeline design docs,
+  plus `fixup_environment_bindings.py` (automates the environment-binding fixes a
+  Dev→Test/Prod promotion needs — see `deployment_pipelines.md`)
 
 The Fabric workspaces, notebooks, pipelines, and semantic models referenced in docs are implemented in a live Fabric trial tenant. This repo tracks the code artefacts and design documents; the Fabric items themselves are managed through Fabric's Git integration.
 
@@ -63,22 +67,25 @@ The `expected_conflicts` ledger in `sample-data/reference/` records every confli
 
 **Nested columns** (arrays, structs) are stored as JSON strings in landing files — parsed at conformed layer, not at landing.
 
-## Data flow (single workspace, `pevc-dev`)
+## Data flow (one workspace per environment tier)
 
 The target architecture documents four separate workspaces, workspace-per-layer
-(`docs/architecture.md` §2, DD-10). The live trial tenant runs everything in **one
-workspace, `pevc-dev`** instead (DD-14) — separation is by lakehouse/item, not by
-workspace. Data flow:
+(`docs/architecture.md` §2, DD-10). The live trial tenant runs each environment tier as
+**one workspace** instead — `pevc-dev`, `pevc-test`, `pevc-prod` (DD-14, extended
+across tiers per DD-12's revision) — separation is by lakehouse/item within a tier, not
+by workspace; separation across tiers is Git-driven promotion (`dev`→`test`→`main` PR
+merges — see `infrastructure/deployment_pipelines.md`). Data flow, per environment:
 
 ```
 External sources (DealRoom, Capital IQ)
-  → OneLake shortcuts → pevc-dev/landing_lakehouse
-      → pevc-dev/conformed_lakehouse  (Delta tables)
+  → OneLake shortcuts → landing_lakehouse
+      → conformed_lakehouse  (Delta tables)
           Stage A: schema validation (quarantine failures)
           Stage B: multi-source reconciliation (surface conflicts)
           Stage C: bitemporal load (effective_date + ingestion_date)
-      → pevc-dev/(Gold Lakehouse, once built) + DirectLake semantic model
-      → pevc-dev/(AI retrieval layer, once built)
+      → gold_lakehouse + DirectLake semantic model (pevc-semantic-model)
+      → AI retrieval layer (ai-integration/ — a separate Python codebase calling
+        Azure AI Foundry, not a Fabric workspace item; WS5, complete)
 ```
 
 Fabric Warehouse is a documented, deferred extension (DD-05) — not provisioned at

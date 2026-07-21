@@ -84,8 +84,11 @@ Queryable via Purview UI and API. Compliance and engineering both have access.
 ### Inference lineage
 
 Tracked through a custom inference audit table — target design names it
-`ws-serving-ai-dev/inference_audit`; as-built (DD-14) it would be `pevc-dev/
-inference_audit` once the AI serving layer (DD-13, not yet built) exists:
+`ws-serving-ai-dev/inference_audit`. WS5 (DD-13, complete — `ai-integration/`) doesn't
+include a dedicated audit table at all: the fusion agent is a standalone Python
+codebase calling Azure AI Foundry, not a Fabric workspace item, so there's no
+`pevc-dev`/`pevc-test`/`pevc-prod` lakehouse table to point this at even as a stand-in.
+The columns below remain the target design regardless of where the table would live:
 
 | Captured | Purpose |
 |---|---|
@@ -114,7 +117,7 @@ Retention: 90 days hot; longer-term retention via export to dedicated storage.
 
 ### 4.2 Inference audit
 
-Custom audit table as described in Section 3 (inference lineage). Append-only Delta table — `pevc-dev` as-built once built (DD-14); `ws-serving-ai-dev` in the target design.
+Custom audit table as described in Section 3 (inference lineage). Append-only Delta table — not provisioned in any of `pevc-dev`/`pevc-test`/`pevc-prod` (design only; WS5's fusion agent, complete, doesn't include a dedicated inference audit table); `ws-serving-ai-dev` in the target design.
 
 Retention: indefinite for high-stakes outputs (IC memo support); sampled or aggregated for lower-stakes.
 

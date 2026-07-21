@@ -424,6 +424,28 @@ honesty (documented limitations, `SYNTHETIC_DATA.md`) beats surface polish.
 **Status:** all WS5 pre-gate items resolved 2026-07-15. Ready to start Stage A
 (extend `data-generator/` with the LP-document module).
 
+**Revision 2026-07-20 — Stages A–E built and certified; WS5 complete.**
+
+All five stages built against live Azure/Fabric infrastructure, each independently
+verified via direct API query rather than trusted at face value (Foundry portal
+claims, script "success" output): Stage A (`data-generator`'s LP-document module, DD-17
+schema — 1,568 documents/5,355 manifest rows at `small` scale); Stage B
+(`ai-integration/index_corpus.py` — full corpus indexed into a Foundry vector store,
+confirmed via `verify_corpus.py`'s direct API query, not the portal); Stage C
+(`ai-integration/structured_agent.py` — the function-calling agent this revision's
+2026-07-15 entry re-platformed off native Fabric Data Agent, now built and answering
+correctly against known values); Stage D (`ai-integration/fusion_agent.py` — routes
+structured/document/hybrid via a forced-choice classification tool, per-leg
+groundedness kept separate rather than blended, exactly as this entry's original
+"Trade-offs accepted" committed to); Stage E (`ai-integration/evaluate_agents.py` —
+oracle-based evaluation, not LLM-judged, mirroring this project's existing
+`expected_conflicts` scoring philosophy).
+
+This closes the original entry's "not yet built... architecture-committed, not
+build-complete" status. See `ai-integration/README.md` for the full stage-by-stage
+writeup and `project-state.md`/`TASK.md` for the session narrative (certification gate
+met 2026-07-20).
+
 ---
 
 ## DD-14. Single Fabric workspace at trial scope; workspace separation deferred
