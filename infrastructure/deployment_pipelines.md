@@ -9,11 +9,13 @@
 > attempt. A real change was promoted through both hops and verified via the Fabric
 > REST API (§6). **Both `pevc-test` and `pevc-prod` are now fully populated, their
 > notebooks run cleanly against their own independent data, and both Power BI reports
-> load correctly** — getting there required fixing six environment-binding gaps Git
+> load correctly** — getting there required fixing four environment-binding gaps Git
 > sync alone didn't handle (stale lakehouse bindings, hardcoded absolute paths, a
 > DirectLake semantic model still pointing at `pevc-dev`, a stale SQL analytics
 > endpoint metadata cache — §6), now automated end to end by
-> `fixup_environment_bindings.py` (§7) and validated against both live environments.
+> `fixup_environment_bindings.py` (§7) and validated against both live environments —
+> plus uploading landing data itself, a separate, expected, non-binding step neither
+> Git sync nor the fixup script is meant to cover.
 
 This document describes the CI/CD approach for promoting Fabric artefacts across environments: Dev → Test → Prod.
 
@@ -155,8 +157,9 @@ lakehouse is a structurally-correct empty shell. Getting real data into a promot
 workspace requires re-running the ingestion/conformed notebooks there.
 
 **`pevc-test` fully populated and verified (2026-07-21).** Running the notebooks
-there surfaced two real gaps beyond the Git sync itself, both found and fixed before
-any data flowed:
+there surfaced three items beyond the Git sync itself, found and fixed before any
+data flowed — two real environment-binding gaps, plus the expected landing-data
+upload (not itself a binding gap, but still a step Git sync doesn't cover):
 
 1. **Lakehouse metadata binding** — all 5 promoted notebooks still had their default
    (and secondary) lakehouse attachment bound to `pevc-dev`'s actual workspace/lakehouse
@@ -205,7 +208,7 @@ picks up both the superseded and current files. The fix is to read `_delta_log`'
 `add`/`remove` actions (or just use a real Spark/SQL-endpoint read) to know which
 files are actually active, rather than assuming every file present is live.
 
-**A fifth gap, found only once someone actually opened the Power BI report:**
+**A fourth gap, found only once someone actually opened the Power BI report:**
 `pevc-semantic-model`'s DirectLake source is not controlled by anything a notebook's
 lakehouse-explorer-style rebinding touches. Its `definition/expressions.tmdl` hardcodes
 an `AzureStorage.DataLake(...)` connection string with `pevc-dev`'s exact workspace ID
@@ -220,7 +223,7 @@ one `expressions.tmdl` line (same mechanism Git integration itself uses to write
 files, not a workaround), leaving every table/relationship/measure untouched. Verified
 by re-fetching the definition before touching anything further.
 
-**A sixth, related gap:** even after the DirectLake source was corrected, `pevc-test`'s
+**A fifth, related gap:** even after the DirectLake source was corrected, `pevc-test`'s
 report failed differently — *"Unable to load a query that produces no tables,"* and the
 model's "Edit tables" dialog couldn't enumerate any tables at all. The underlying Delta
 tables were confirmed still present via OneLake; the actual cause was the Lakehouse's
@@ -244,13 +247,14 @@ Still open:
 
 ## 7. `fixup_environment_bindings.py`
 
-Automates all six binding fixes above, given a target environment name. Same
+Automates all four environment-binding fixes above (not the landing-data upload —
+see "What it doesn't do" below), given a target environment name. Same
 mechanism as Git integration itself — every fix is a `getDefinition`/
 `updateDefinition` REST call, not a workaround. Driven by name lookups
 (workspace, lakehouse, notebook, semantic model names), not hardcoded GUIDs,
 so it's reusable if a third non-Dev environment is ever added.
 
-**How it works:** every one of the six gaps found by hand turned out to be
+**How it works:** every one of the four binding gaps found by hand turned out to be
 the same source-workspace/lakehouse GUIDs appearing as plain substrings in
 TMDL/notebook text — a notebook's `dependencies.lakehouse` metadata block, a
 hardcoded `abfss://` path, the semantic model's `AzureStorage.DataLake(...)`
@@ -259,7 +263,7 @@ substitution map, applied to just the relevant text parts of each item's
 definition (leaving tables, relationships, measures, other code cells
 untouched), pushed back only if something actually changed. Also triggers a
 SQL analytics endpoint metadata refresh for all three lakehouses regardless
-(cheap, idempotent, and was the sixth gap).
+(cheap, idempotent, and was the fifth gap).
 
 **What it doesn't do**: upload landing data into a fresh `landing_lakehouse`,
 or run the conformed/Gold notebooks — those stay manual (lower-frequency,

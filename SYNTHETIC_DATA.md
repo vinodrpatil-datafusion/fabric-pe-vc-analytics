@@ -32,9 +32,9 @@ The two external feeds disagree at controlled rates so `02_reconciliation.py` (W
 | Conflict type | Mechanism | Observed (small, seed 42) |
 |---|---|---|
 | `existence_disagreement` (company) | Independent coverage draws per source | ~32% single-source (coverage-gap) |
-| `value_disagreement` | Source-specific noise on `amount_raised`; lead-investor alteration | ~24% of shared rounds |
-| `temporal_disagreement` | `announced_date` = true close + source-specific lag | ~38% of shared rounds |
-| `existence_disagreement` (edge, **genuine**) | Edge dropped by one source when **both** cover the company | ~13% of edges |
+| `value_disagreement` | Source-specific noise on `amount_raised`; lead-investor alteration | ~22% of shared rounds |
+| `temporal_disagreement` | `announced_date` = true close + source-specific lag | ~35% of shared rounds |
+| `existence_disagreement` (edge, **genuine**) | Edge dropped by one source when **both** cover the company | ~11% of edges |
 | `existence_disagreement` (edge, coverage-gap) | Edge absent only because one source never covered the company | ~29% of edges |
 
 Rates are tunable in `pevc_generator/reference.py` (`SOURCE_PROFILES`).

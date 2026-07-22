@@ -6,6 +6,28 @@
 **Author:** Vinod Patil — Lead Data & AI Engineer ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
+```mermaid
+flowchart LR
+    subgraph Medallion["Fabric Lakehouse -- medallion"]
+        Landing["Bronze<br/>landing_lakehouse"] --> Conformed["Silver<br/>conformed_lakehouse<br/>(validate -> reconcile -> bitemporal load)"]
+        Conformed --> Gold["Gold<br/>gold_lakehouse<br/>(star schema)"]
+    end
+    Gold --> Semantic["DirectLake semantic model<br/>pevc-semantic-model"]
+
+    Question["Question"] --> Classify["classify_question()<br/>fusion_agent.py"]
+    Classify -- structured --> Structured["structured_agent.py<br/>(DAX via Power BI REST)"]
+    Classify -- document --> Document["document_agent.py<br/>(Foundry file_search)"]
+    Classify -- hybrid --> Structured
+    Classify -- hybrid --> Document
+    Semantic --> Structured
+    Corpus["LP document corpus<br/>(Foundry vector store, DD-17)"] --> Document
+    Structured --> Synth["synthesize()<br/>hybrid only"]
+    Document --> Synth
+    Structured --> Answer["Answer"]
+    Document --> Answer
+    Synth --> Answer
+```
+
 ---
 
 ## Why this project exists
@@ -161,7 +183,7 @@ fabric-pe-vc-analytics/
 ├── infrastructure/
 │   ├── workspace_layout.md              Fabric workspace structure
 │   ├── deployment_pipelines.md          CI/CD approach — implemented, Git-driven promotion
-│   ├── fixup_environment_bindings.py    Automates the six environment-binding fixes below
+│   ├── fixup_environment_bindings.py    Automates the four environment-binding fixes below
 │   └── requirements.txt
 ├── data-generator/                Python package producing synthetic landing feeds
 ├── sample-data/                   Committed generator output (seed=42, scale=small)
@@ -197,7 +219,7 @@ fabric-pe-vc-analytics/
 | DirectLake semantic model | ✅ Complete | `pevc-semantic-model` — 4 Gold tables, relationships, 5 core LP measures (MOIC, IRR proxy per DD-16, NAV proxy, sector concentration, vintage performance) plus 2 supporting DAX measures; full contract in [`docs/measures.md`](docs/measures.md) |
 | Power BI report | ✅ Complete | `LP Portfolio Performance` — KPI cards, vintage/sector tables, sector-concentration chart, DirectLake-connected |
 | Git integration (Fabric ↔ GitHub) | ✅ Complete | All three environments connected, folder `fabric/pevc/` (shared across branches — see below) |
-| AI integration (fusion agent, WS5) | ✅ Complete | Pattern in DD-13 (`ai-integration/`); Stages A–E all complete and validated against live data — corpus generation, Foundry indexing, structured + document retrieval legs, routing/fusion, and an oracle-based evaluation harness (structured leg 6/6 grounded, document leg 5/6 with a documented citation-accuracy finding) |
+| AI integration (fusion agent, WS5) | ✅ Complete | Pattern in DD-13 (`ai-integration/`); Stages A–E all complete and validated against live data — corpus generation, Foundry indexing, structured + document retrieval legs, routing/fusion, and an oracle-based evaluation harness (structured leg 6/6 grounded; document leg 4/6 grounded, citation-accuracy 4/5, annotation coverage 5/6 — see [`ai-integration/EVALUATION.md`](ai-integration/EVALUATION.md)) |
 | Deployment pipelines (CI/CD via Git) | ✅ Complete | `pevc-dev`/`pevc-test`/`pevc-prod`, Git-driven promotion (PR merge `dev`→`test`→`main`, DD-12) verified end to end — data, notebooks, semantic model, and reports all working independently in Test/Prod; see `infrastructure/deployment_pipelines.md` |
 | Microsoft Purview lineage integration | 📐 Designed, not implemented | Governance model assumes Purview (see `docs/governance.md`); not wired up in the trial tenant |
 
@@ -207,7 +229,7 @@ fabric-pe-vc-analytics/
 
 ## Contact
 
-This is part of an active practice in Enterprise AI & Data Architecture for financial services and regulated industries.
+This is part of an active Data & AI engineering practice for financial services and regulated industries.
 
 - **Email:** vinodrpatil@outlook.com
 - **LinkedIn:** [linkedin.com/in/vinodrpatil](https://www.linkedin.com/in/vinodrpatil/)

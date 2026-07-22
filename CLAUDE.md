@@ -37,10 +37,12 @@ The generator models data flow as: **canonical oracle → per-source projections
 
 | Module | Responsibility |
 |---|---|
-| `canonical.py` | Generates the "real world" ground truth for all entities |
-| `sources.py` | Projects the canonical data into per-source feeds (dealroom, capitaliq) with noise and coverage draws |
+| `canonical.py` | Generates the "real world" ground truth for companies, investors, funding_rounds, investments, and people |
+| `sources.py` | Projects companies/investors/funding_rounds/investments into per-source feeds (dealroom, capitaliq) with noise and coverage draws — `people` is not projected here, it passes through unchanged into the internal feed |
 | `conflicts.py` | Derives the `expected_conflicts` ledger — the oracle that WS2 reconciliation is scored against |
-| `internal.py` | Generates internal-only feeds: people, deals, documents |
+| `internal.py` | Generates internal-only feeds: deals, documents (not people — see `canonical.py` above) |
+| `lp_documents.py` | Generates the LP document corpus: quarterly letters, capital calls, memos (DD-17) |
+| `scale.py` | `ScaleProfile`s (`small`/`medium`/`large`) driving `--scale` |
 | `reference.py` | Vocabularies and `SOURCE_PROFILES` (tune conflict rates here) |
 | `lineage.py` | Attaches landing metadata columns to every row |
 | `io_utils.py` | Parquet/CSV writer; handles JSON-serialised nested columns |
@@ -91,7 +93,10 @@ External sources (DealRoom, Capital IQ)
 Fabric Warehouse is a documented, deferred extension (DD-05) — not provisioned at
 portfolio scope. Analytical SQL access is via the Lakehouse SQL endpoint over Gold.
 
-AI integration reads from the conformed layer only — never from raw landing feeds.
+AI integration reads from the conformed layer only — never from raw landing feeds —
+**except** `lp_documents` (DD-17): it's authored once per fund, not independently
+reported by multiple vendors, so it has no conformed-layer counterpart to reconcile
+into; `index_corpus.py` reads it straight from landing by design (DD-13's revision).
 
 ## Key design constraints
 
@@ -103,7 +108,7 @@ AI integration reads from the conformed layer only — never from raw landing fe
 
 ## Reference docs
 
-- `docs/data_model.md` — canonical schema for all eight domain entities
+- `docs/data_model.md` — canonical schema for all ten domain entities
 - `docs/architecture.md` — full architecture with component rationale
 - `docs/design_decisions.md` — numbered decision log (DD-01 through DD-07+)
 - `infrastructure/workspace_layout.md` — Fabric workspace names, items, RBAC
