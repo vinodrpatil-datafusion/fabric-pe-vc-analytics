@@ -24,6 +24,7 @@ sample-data/
 │   └── internal/    people deals documents lp_documents lp_document_manifest
 └── reference/
     ├── vendor_id_mapping        canonical_id <-> {source, vendor_id}
+    ├── expected_conflicts       conflict ledger oracle (NOT a feed)
     └── ground_truth_*           reconciliation oracle (NOT a feed)
 ```
 

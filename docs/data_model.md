@@ -8,7 +8,7 @@ The model is implemented in the **conformed Lakehouse** as Delta tables. Serving
 
 ## 1. Domain entities
 
-Eight core entities. Each is described with purpose, key attributes, temporal pattern, and the rationale behind any non-obvious modelling choice.
+Ten core entities. Each is described with purpose, key attributes, temporal pattern, and the rationale behind any non-obvious modelling choice.
 
 ### 1.1 Companies
 

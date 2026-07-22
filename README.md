@@ -161,7 +161,7 @@ fabric-pe-vc-analytics/
 ├── infrastructure/
 │   ├── workspace_layout.md              Fabric workspace structure
 │   ├── deployment_pipelines.md          CI/CD approach — implemented, Git-driven promotion
-│   ├── fixup_environment_bindings.py    Automates the six environment-binding fixes below
+│   ├── fixup_environment_bindings.py    Automates the four environment-binding fixes below
 │   └── requirements.txt
 ├── data-generator/                Python package producing synthetic landing feeds
 ├── sample-data/                   Committed generator output (seed=42, scale=small)
