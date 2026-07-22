@@ -1,9 +1,11 @@
 """Canonical ground-truth generation.
 
-Produces the 'real world' for the five entities that originate from external
-sources: companies, investors, funding_rounds, investments, people. This oracle
-is later projected into per-source feeds (sources.py) with controlled conflicts,
-and emitted to reference/ for reconciliation scoring (it is NOT a landing feed).
+Produces the 'real world' for five entities: companies, investors,
+funding_rounds, investments, and people. Of these, only the first four are
+projected into per-source external feeds (sources.py) with controlled
+conflicts -- people is sourced internally and passed through unchanged into
+the internal landing feed, not projected or perturbed. This oracle is emitted
+to reference/ for reconciliation scoring (it is NOT a landing feed).
 """
 
 from __future__ import annotations

@@ -446,6 +446,24 @@ build-complete" status. See `ai-integration/README.md` for the full stage-by-sta
 writeup and `project-state.md`/`TASK.md` for the session narrative (certification gate
 met 2026-07-20).
 
+**Revision 2026-07-22 — DD-08 exception for `lp_documents`, made explicit.**
+
+Found during a full-repo alignment pass: `index_corpus.py` reads
+`sample-data/landing/internal/lp_documents.parquet` directly — a raw landing file, not
+a conformed table. DD-08 ("Azure OpenAI integration over conformed data only") does
+not literally hold for this leg, and this revision's own "both legs read only from the
+conformed/Gold layer" line above was wrong as stated.
+
+This is deliberate, not drift, once named: `lp_documents` (DD-17) has no multi-source
+variants to reconcile (it's authored once by the fund, not independently reported by
+`dealroom`/`capitaliq`) and no temporal fact requiring bitemporal modelling — routing
+it through Stages A–C would validate/reconcile/bitemporally-load a table that is
+already the single source of truth by construction, for no reconciliation benefit.
+DD-08's principle still holds for the structured leg, which queries Gold directly.
+
+`CLAUDE.md`'s "AI integration reads from the conformed layer only" constraint gets a
+matching carve-out for this same reason.
+
 ---
 
 ## DD-14. Single Fabric workspace at trial scope; workspace separation deferred

@@ -15,8 +15,9 @@ landing/
 ├── capitaliq/   External vendor feed (Capital IQ-shaped)
 └── internal/    Firm's own systems
 reference/
-├── vendor_id_mapping   canonical_id <-> {source, vendor_id}
-└── ground_truth_*      reconciliation oracle (NOT a feed)
+├── vendor_id_mapping    canonical_id <-> {source, vendor_id}
+├── expected_conflicts   conflict ledger oracle (NOT a feed) -- see CLAUDE.md
+└── ground_truth_*       reconciliation oracle (NOT a feed)
 ```
 
 The two external feeds deliberately disagree (existence / value / temporal conflicts) so the conformed reconciliation in WS2 has real work. `reference/ground_truth_*` is the oracle to score that reconciliation against — it is not ingested.
