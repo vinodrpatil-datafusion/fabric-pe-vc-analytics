@@ -6,6 +6,7 @@ document retrieval over the synthetic LP corpus (DD-17), composed by a routing l
 See [`../docs/design_decisions.md`](../docs/design_decisions.md) DD-13 for the pattern
 and its 2026-07-15 revision (native Fabric Data Agent is blocked on trial capacity —
 the structured leg is a custom function-calling agent instead, not the native item).
+See [`EVALUATION.md`](EVALUATION.md) for the full evaluation results and methodology.
 
 ## Stages
 
