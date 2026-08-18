@@ -3,7 +3,7 @@
 > A reference architecture and working portfolio project for institutional private equity and venture capital analytics, built on Microsoft Fabric.
 
 **Status:** Active development. Architecture v1 complete; core build (conformed layer → Gold star schema → DirectLake semantic model → Power BI report) complete and validated against a live Fabric tenant. AI integration (WS5, fusion agent) complete and validated against live data. Deployment pipelines (`pevc-dev`/`pevc-test`/`pevc-prod`, Git-driven promotion) complete and verified end to end.
-**Author:** Vinod Patil — Lead Data & AI Engineer ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
+**Author:** Vinod Patil — Data & AI Architect · Microsoft Fabric ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
 ```mermaid
@@ -172,6 +172,7 @@ The accompanying agentic AI work — the AI Business Analyst Agent — lives in 
 ```
 fabric-pe-vc-analytics/
 ├── README.md                     ← you are here
+├── CHANGELOG.md                  Build narrative — what was built, and what was found broken
 ├── CLAUDE.md                     Guidance for AI-assisted work in this repo
 ├── SYNTHETIC_DATA.md             Synthetic data contract and conflict model
 ├── docs/
@@ -237,4 +238,4 @@ This is part of an active Data & AI engineering practice for financial services 
 
 ---
 
-*Last updated: 2026-07-13. This project is under active development; design documents may evolve.*
+*Last updated: 2026-08-17. This project is under active development; design documents may evolve.*
