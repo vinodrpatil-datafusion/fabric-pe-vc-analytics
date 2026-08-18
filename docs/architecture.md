@@ -131,7 +131,7 @@ External data sources are accessed through **OneLake shortcuts** to underlying s
 
 **Trade-off acknowledged:** Shortcuts introduce a dependency on source availability and tolerate source-side schema changes poorly. The validation layer (Section 3.2) is the compensating control.
 
-For internal historical deal data and any feed that requires transformation before landing, **Fabric Data Pipelines** (inheriting ADF heritage) handle the copy. Same pipeline patterns I've operated in production at LGT, translated to Fabric's pipeline model.
+For internal historical deal data and any feed that requires transformation before landing, **Fabric Data Pipelines** (inheriting ADF heritage) handle the copy. Same pipeline patterns I've operated in production at a European private-banking group, translated to Fabric's pipeline model.
 
 ### 3.2 Landing to conformed
 
@@ -264,4 +264,4 @@ Each workflow consumes the same conformed data layer through different serving p
 
 ---
 
-*Last updated: 2026-07-13. This is a living architectural document for an active portfolio project.*
+*Last updated: 2026-08-17. This is a living architectural document for an active portfolio project.*

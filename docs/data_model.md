@@ -265,4 +265,4 @@ Calling out gaps:
 
 ---
 
-*Last updated: May 2026. Schema evolves; significant changes are tracked in `design_decisions.md`.*
+*Last updated: 2026-08-17. Schema evolves; significant changes are tracked in `design_decisions.md`.*
