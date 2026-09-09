@@ -6,6 +6,8 @@
 **Author:** Vinod Patil — Lead Data & AI Engineer ([LinkedIn](https://www.linkedin.com/in/vinodrpatil/))
 **Purpose:** Public portfolio artefact demonstrating Fabric-native architecture for institutional investment workflows.
 
+**Scope:** This is a reference implementation built independently of any client engagement, on a Fabric trial tenant with synthetic data — separate from production work delivered under contract.
+
 ```mermaid
 flowchart LR
     subgraph Medallion["Fabric Lakehouse -- medallion"]
